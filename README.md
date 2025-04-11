@@ -456,7 +456,7 @@ filter =
             [ Svg.Attributes.baseFrequency "0.05"
             , Svg.Attributes.type_ "fractalNoise"
             , Svg.Attributes.numOctaves "1"
-            , Svg.Attributes.seed "2"
+            , Svg.Attributes.seed "1"
             , Svg.Attributes.result "BOTTOM-SPLASH_10"
             ]
             []
@@ -601,7 +601,7 @@ main =
         , Svg.text_
             [ Svg.Attributes.fontSize "160px"
             , Svg.Attributes.x "320"
-            , Svg.Attributes.y "150"
+            , Svg.Attributes.y "170"
             , Svg.Attributes.textAnchor "middle"
             , Svg.Attributes.fill "#16B5FF"
             , Svg.Attributes.filter "url(#my-filter)"
@@ -627,21 +627,24 @@ splashText  =
         bottomSplash =
             Filter.sourceAlpha
                 |> Filter.gaussianBlur 6.5
-                |> Filter.displacementMap [] { scale = 420 } (Filter.fractalNoise { baseFrequency = 0.05, numOctaves = 1, seed = 2 })
+                |> Filter.displacementMap [] { scale = 420 }
+                    (Filter.fractalNoise { baseFrequency = 0.05, numOctaves = 1, seed = 1 })
                 |> Filter.compositeIn (Filter.floodStr "#16B5FF")
 
 
         middleSplash =
             Filter.sourceAlpha
                 |> Filter.gaussianBlur 0.1
-                |> Filter.displacementMap [] { scale = 25 } (Filter.fractalNoise { baseFrequency = 0.1, numOctaves = 1, seed = 1 })
+                |> Filter.displacementMap [] { scale = 25 }
+                    (Filter.fractalNoise { baseFrequency = 0.1, numOctaves = 1, seed = 1 })
                 |> Filter.compositeIn (Filter.floodStr "#A64DFF")
 
 
         topSplash =
              Filter.sourceAlpha
                 |> Filter.gaussianBlur 3.5
-                |> Filter.displacementMap [] { scale = 220 } (Filter.fractalNoise { baseFrequency = 0.07, numOctaves = 1, seed = 1 })
+                |> Filter.displacementMap [] { scale = 220 }
+                    (Filter.fractalNoise { baseFrequency = 0.07, numOctaves = 1, seed = 1 })
                 |> Filter.compositeIn (Filter.floodStr "#9800FF")
 
 
@@ -678,7 +681,7 @@ splashText  =
 
 main =
     Evg.svg [] { width = 640, height = 300 }
-        [ splashText { x = 320, y = 150, anchor = Evg.Middle } "Evg" ]
+        [ splashText { x = 320, y = 170, anchor = Evg.Middle } "Evg" ]
 ```
 
 Note how much easier the logic of the filter is to read, since the control flow of how the pixels are processed looks much more like normal Elm code.
@@ -697,7 +700,8 @@ splashText  =
         splash { blur, frequency, color, scale } =
             Filter.sourceAlpha
                 |> Filter.gaussianBlur blue
-                |> Filter.displacementMap [] { scale = scale } (Filter.fractalNoise { baseFrequency = frequency, numOctaves = 1, seed = 1 })
+                |> Filter.displacementMap [] { scale = scale }
+                    (Filter.fractalNoise { baseFrequency = frequency, numOctaves = 1, seed = 1 })
                 |> Filter.compositeIn (Filter.floodStr color)
 
         base =
@@ -736,8 +740,8 @@ pulseRect =
             [ Svg.Attributes.attributeName "rx"
             , Svg.Attributes.values "30; 50; 20; 30"
             , Svg.Attributes.begin "0s"
-            , Svg.Attributes.dur "4s"
-            , Svg.Attributes.keyTimes "0; 0.2; 0.5; 1"
+            , Svg.Attributes.dur "3s"
+            , Svg.Attributes.keyTimes "0; 0.2; 0.6; 1"
             , Svg.Attributes.calcMode "spline"
             , Svg.Attributes.repeatCount "indefinite"
             , Svg.Attributes.keySplines "0 0 1 1; .5 0 .5 1; 0 0 1 1"
@@ -758,8 +762,8 @@ pulseRect =
         { x = 10, y = 10, width = 100, height = 100 }
         |> Evg.Animate.easedAttributeKeyframes [ Evg.Animate.repeatIndefinite ] Evg.cornerRadius
             [ ( 0.8, Evg.Animate.easeLinear, 50 )
-            , ( 2.0, Evg.Animate.easeInOut, 20 )
-            , ( 4.0, Evg.Animate.easeLinear, 30 )
+            , ( 1.8, Evg.Animate.easeInOut, 20 )
+            , ( 3.0, Evg.Animate.easeLinear, 30 )
             ]
 ```
 
