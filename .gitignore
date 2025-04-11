@@ -1,0 +1,6 @@
+.DS_Store
+
+elm-stuff/
+node_modules
+tests/VerifyExamples
+benchmarks/index.html
