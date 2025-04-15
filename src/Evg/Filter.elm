@@ -1,4 +1,50 @@
-module Evg.Filter exposing (Filter, colorMatrix, floodStr, fractalNoise, gaussianBlur, gaussianBlurXY, sourceAlpha, withinRelative)
+module Evg.Filter exposing
+    ( Filter
+    , withinRelative
+    , sourceAlpha
+    , floodStr
+    , gaussianBlur, gaussianBlurXY
+    , componentTransfer, RemappingFunction, identity, table, discrete, linear, gamma
+    )
+
+{-|
+
+
+# Basics
+
+@docs Filter
+
+
+### Modifying filters
+
+@docs withinRelative
+
+
+# Filters
+
+
+## Sources
+
+These represent ways to get the input image into the filter pipeline:
+
+@docs sourceAlpha
+
+
+## Flood
+
+@docs floodStr
+
+
+## Gaussian blur
+
+@docs gaussianBlur, gaussianBlurXY
+
+
+## Component transfer
+
+@docs componentTransfer, RemappingFunction, identity, table, discrete, linear, gamma
+
+-}
 
 import Dict exposing (Dict)
 import VirtualDom
@@ -27,6 +73,7 @@ type alias FilterPayload =
         }
 
 
+{-| -}
 type Filter
     = Filter FilterPayload
     | Virtual String
@@ -207,6 +254,173 @@ mergeWithTemplate result input template =
 
                 _ :: ts ->
                     mergeWithTemplate (i :: result) is ts
+
+
+{-| This filter performs component-wise remapping of data using the remapping functions provided.
+It allows operations like brightness adjustment, contrast adjustment, color balance or thresholding.
+The calculations are performed on non-premultiplied color values.
+-}
+componentTransfer :
+    { r : RemappingFunction
+    , g : RemappingFunction
+    , b : RemappingFunction
+    , a : RemappingFunction
+    }
+    -> Filter
+    -> Filter
+componentTransfer { r, g, b, a } inFilter =
+    let
+        remappingToChild remapping channel =
+            case remapping of
+                Identity ->
+                    Nothing
+
+                Table values ->
+                    Just
+                        ( channel
+                        , [ ( "type", "table" )
+                          , ( "tableValues", String.join " " (List.map String.fromFloat values) )
+                          ]
+                        )
+
+                Discrete values ->
+                    Just
+                        ( channel
+                        , [ ( "type", "discrete" )
+                          , ( "tableValues", String.join " " (List.map String.fromFloat values) )
+                          ]
+                        )
+
+                Linear slope intercept ->
+                    Just
+                        ( channel
+                        , [ ( "type", "linear" )
+                          , ( "slope", String.fromFloat slope )
+                          , ( "intercept", String.fromFloat intercept )
+                          ]
+                        )
+
+                Gamma amplitude exponent offset ->
+                    Just
+                        ( channel
+                        , [ ( "type", "gamma" )
+                          , ( "amplitude", String.fromFloat amplitude )
+                          , ( "exponent", String.fromFloat exponent )
+                          , ( "offset", String.fromFloat offset )
+                          ]
+                        )
+
+        id =
+            toId inFilter
+
+        children =
+            List.filterMap Basics.identity
+                [ remappingToChild r "feFuncR"
+                , remappingToChild g "feFuncG"
+                , remappingToChild b "feFuncB"
+                , remappingToChild a "feFuncA"
+                ]
+    in
+    Filter
+        { name = "feComponentTransfer"
+        , id = "feComponentTransfer-" ++ id ++ String.join "-" (List.map (\( aa, bs ) -> aa ++ "_" ++ (List.map (\( bk, bv ) -> bk ++ "_" ++ bv) bs |> String.join "-")) children)
+        , args = [ ( "in", id ) ]
+        , children =
+            List.filterMap Basics.identity
+                [ remappingToChild r "feFuncR"
+                , remappingToChild g "feFuncG"
+                , remappingToChild b "feFuncB"
+                , remappingToChild a "feFuncA"
+                ]
+        , defs = makeDefs inFilter
+        }
+
+
+{-| A component wise remamapping function.
+-}
+type RemappingFunction
+    = Identity
+    | Table (List Float)
+    | Discrete (List Float)
+    | Linear Float Float
+    | Gamma Float Float Float
+
+
+{-| The identity function - does not change the channel at all.
+-}
+identity : RemappingFunction
+identity =
+    Identity
+
+
+{-| For table, the function is defined by linear interpolation between the values given. The table has n+1 values (i.e., v0 to vn) specifying the start and end values for n evenly sized interpolation regions.
+
+Let's look at an example:
+
+    Filter.table [ 0, 0.6, 0.8, 1 ]
+
+In this case we have 4 values, so we have 3 equal regions:
+
+    0.0 - 0.33 ==> 0.0 - 0.6
+
+    0.33 - 0.66 ==> 0.6 - 0.8
+
+    0.66 - 1.0 ==> 0.8 - 1.0
+
+So for instance if I get a color value of 0.5, this falls in the middle of the second region, and so will get remapped to the middle of the output region, which is 0.7.
+
+-}
+table : List Float -> RemappingFunction
+table =
+    Table
+
+
+{-| For discrete, the function is defined by the step function defined by the values given, which provides a list of n values (i.e., v0 to vn-1) in order to identify a step function consisting of n steps.
+
+Let's look at an example:
+
+    Filter.discrete [ 0, 0.6, 0.8, 1 ]
+
+In this case we have 4 values, so we have 4 equal regions:
+
+    0.0 - 0.25 ==> 0.0
+
+    0.25 - 0.5 ==> 0.6
+
+    0.5 - 0.75 ==> 0.8
+
+    0.75 - 1.0 ==> 1
+
+So for instance if I get a color value of 0.6, this falls in the third region, and so will get remapped to the third value, which is 0.8.
+
+-}
+discrete : List Float -> RemappingFunction
+discrete =
+    Discrete
+
+
+{-| For linear, the function is defined by the following linear equation:
+
+    C' = slope * C + intercept
+
+Where C is the input value and C' is the output value.
+
+-}
+linear : { slope : Float, intercept : Float } -> RemappingFunction
+linear { slope, intercept } =
+    Linear slope intercept
+
+
+{-| For gamma, the function is defined by the following exponential function:
+
+    C' = amplitude * C  ^ exponent + offset
+
+Where C is the input value and C' is the output value.
+
+-}
+gamma : { amplitude : Float, exponent : Float, offset : Float } -> RemappingFunction
+gamma { amplitude, exponent, offset } =
+    Gamma amplitude exponent offset
 
 
 

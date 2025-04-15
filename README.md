@@ -879,6 +879,12 @@ Possibly we'll also support some of the native SMIL event handling primitives, s
 
 - I didn't cover some important areas above such as clipping & masking, patterns or gradients. Let's just say that if you like the filter design, these areas will work quite similarly.
 
+- Documentation. We aim to have good documentation about everything the library can do:
+
+  | elm/svg                       | elm-community/typed-svg             | gampleman/evg                 |
+  | ----------------------------- | ----------------------------------- | ----------------------------- |
+  | ![](docs/images/docs-svg.png) | ![](docs/images/docs-typed-svg.png) | ![](docs/images/docs-evg.png) |
+
 ## Like it? Build it!
 
 Does the above sound good to you? Are you wondering where can you install this library and start using it? Unfortunately, it doesn't exist yet.
