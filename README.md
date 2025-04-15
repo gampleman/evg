@@ -2,7 +2,11 @@
 
 Elm Vector Graphics
 
-This is a WIP vector graphics library. It aims to have significantly better DX than similar Elm libraries while maintaining appropriate type safety and maintaining the expressivity of the underlying SVG.
+> The API is a bit wonky
+>
+> -- [elm/svg](https://package.elm-lang.org/packages/elm/svg/latest/)
+
+This is a WIP vector graphics library. It aims to have significantly better DX than similar Elm libraries (i.e. not a _wonky API_) while maintaining appropriate type safety and maintaining the expressivity of the underlying SVG.
 
 Let's look at some example comparisons.
 
@@ -155,6 +159,80 @@ Finally, this example also illustrates one of our compositional primitives - the
 
 <img src="docs/images/ngons.svg" alt="Sample regular polygons" width="600" height="200" />
 
+<details>
+    <summary>Some auxiliary geometry code</summary>
+
+I've factored this out to make the following example a bit easier on the eyes, but in real life I would often include it inline:
+
+```elm
+module GeometryHelpers exposing (..)
+
+type alias Point =
+    ( Float, Float )
+
+polarToCartesian : Point -> Float -> Float -> Point
+polarToCartesian (cx, cy) angle r =
+    ( cx + radius * cos angle
+    , cy + radius * sin angle
+    )
+
+regularPolygonAngle : Int -> Float
+regularPolygonAngle sides =
+    2 * pi / toFloat n
+
+len : Point -> Point -> Float
+len ( x1, y1 ) ( x2,  y2 ) =
+            sqrt ((x2 - x1) ^ 2 + (y2 - y1) ^ 2)
+
+interpolateLine : Float -> Point -> Point -> Point
+interpolateLine t ( x1, y1) ( x2,  y2 ) =
+            ( (1 - t) * x1 + t * x2, (1 - t) * y1 + t * y2 )
+
+
+roundedPolygonPoints : Float -> List Point -> List ( Float, Point, Point )
+roundedPolygonPoints cornerRadius points =
+    let
+        shift l =
+            List.drop l (List.Extra.cycle (n + l) points)
+
+    in
+    List.map3
+        (\( x1, y1 ) ( x2, y2 ) ( x3, y3 ) ->
+            let
+                l1 =
+                    len x1 y1 x2 y2
+
+                l2 =
+                    len x2 y2 x3 y3
+
+                r =
+                    min cornerRadius (min l1 l2 / 2)
+
+                angle =
+                    pi + (atan2 (x3 - x2) (y3 - y2) - atan2 (x2 - x1) (y2 - y1))
+
+                offset =
+                    abs (r / tan (angle / 2))
+
+                ( midX, midY ) =
+                    pointOnLine ((l1 - offset) / l1) x1 y1 x2 y2
+
+                ( endX, endY ) =
+                    pointOnLine (offset / l2) x2 y2 x3 y3
+            in
+            ( r
+            , ( midX, midY)
+            , ( endX, endY )
+            )
+        )
+        points
+        (shift 1)
+        (shift 2)
+
+```
+
+</details>
+
 ```elm
 import List.Extra
 import Svg exposing (Svg)
@@ -164,44 +242,22 @@ import Svg.Attributes
 roundedPolygon : List (Svg.Attribute msg) -> Maybe Float -> List ( Float, Float ) -> Svg msg
 roundedPolygon attrs cornerRadius points =
     let
-        n =
-            List.length points
+        roundedPoints =
+            GeometryHelpers.roundedPolygonPoints
+                (Maybe.withDefault 0 cornerRadius)
+                points
 
-        shift l =
-            List.drop l (List.Extra.cycle (n + l) points)
+        move =
+            List.reverse roundedPoints
+                |> List.head
+                |> Maybe.map (\( _, _, ( x, y ) ) -> "M" ++ String.fromFloat x ++ " " ++ String.fromFloat y)
+                |> Maybe.withDefault "M0,0"
 
-        len x1 y1 x2 y2 =
-            sqrt ((x2 - x1) ^ 2 + (y2 - y1) ^ 2)
-
-        pointOnLine t x1 y1 x2 y2 =
-            ( (1 - t) * x1 + t * x2, (1 - t) * y1 + t * y2 )
-
-        els =
-            List.map3
-                (\( x1, y1 ) ( x2, y2 ) ( x3, y3 ) ->
-                    let
-                        l1 =
-                            len x1 y1 x2 y2
-
-                        l2 =
-                            len x2 y2 x3 y3
-
-                        r =
-                            min (Maybe.withDefault 0 cornerRadius) (min l1 l2 / 2)
-
-                        angle =
-                            pi + (atan2 (x3 - x2) (y3 - y2) - atan2 (x2 - x1) (y2 - y1))
-
-                        offset =
-                            abs (r / tan (angle / 2))
-
-                        ( midX, midY ) =
-                            pointOnLine ((l1 - offset) / l1) x1 y1 x2 y2
-
-                        ( endX, endY ) =
-                            pointOnLine (offset / l2) x2 y2 x3 y3
-                    in
-                    ( "L"
+        path =
+            roundedPoints
+                |>  List.map
+                (\( r, ( midX, midY ), ( endX, endY ) ) ->
+                    "L"
                         ++ String.fromFloat midX
                         ++ " "
                         ++ String.fromFloat midY
@@ -213,22 +269,7 @@ roundedPolygon attrs cornerRadius points =
                         ++ String.fromFloat endX
                         ++ " "
                         ++ String.fromFloat endY
-                    , ( endX, endY )
-                    )
                 )
-                points
-                (shift 1)
-                (shift 2)
-
-        move =
-            List.reverse els
-                |> List.head
-                |> Maybe.map (\( _, ( x, y ) ) -> "M" ++ String.fromFloat x ++ " " ++ String.fromFloat y)
-                |> Maybe.withDefault "M0,0"
-
-        path =
-            els
-                |> List.map Tuple.first
                 |> String.join " "
     in
     Svg.path (Svg.Attributes.d (move ++ path ++ "Z") :: attrs) []
@@ -249,22 +290,19 @@ ngon attrs args =
         sides =
             max 3 args.sides
 
-        n =
-            toFloat sides
-
         angle =
-            2 * pi / n
+            GeometryHelpers.regularPolygonAngle sides
 
         radius =
             max 0 args.circumference
 
         points =
             List.range 1 sides
-                |> List.map
-                    (\index ->
-                        ( args.cx + radius * cos (toFloat index * angle)
-                        , args.cy + radius * sin (toFloat index * angle)
-                        )
+                |> List.map (\index ->
+                    GeometryHelpers.polarToCartesian
+                        (args.cx, args.cy)
+                        (toFloat index * angle)
+                        radius
                     )
     in
     roundedPolygon attrs args.cornerRadius points
@@ -313,64 +351,22 @@ cornerRadius =
 roundedPolygon : List (Evg.Attribute { a | cornerRadius : Supported } msg) -> List ( Float, Float ) -> Evg c msg
 roundedPolygon attrs points =
     let
-        n =
-            List.length points
-
-        shift l =
-            List.drop l (List.Extra.cycle (n + l) points)
-
-        len ( x1, y1 ) ( x2,  y2 ) =
-            sqrt ((x2 - x1) ^ 2 + (y2 - y1) ^ 2)
-
-        pointOnLine t ( x1, y1) ( x2,  y2 ) =
-            ( (1 - t) * x1 + t * x2, (1 - t) * y1 + t * y2 )
-
-
         radius =
             Evg.Attribute.getFloat "cornerRadius" 0 attrs
 
-        angleBetween ( x1, y1 ) ( x2, y2 ) =
-            atan2 (x2 - x1) (y2 - y1)
-
-        els =
-            List.map3
-                (\p1 p2 p3 ->
-                    let
-                        l1 =
-                            len p1 p2
-
-                        l2 =
-                            len p2 p3
-
-                        r =
-                            min radius (min l1 l2 / 2)
-
-                        angle =
-                            pi + (angleBetween p3 p2 - angleBetween p2 p1)
-
-                        offset =
-                            abs (r / tan (angle / 2))
-
-                        mid =
-                            pointOnLine ((l1 - offset) / l1) p1 p2
-
-                        end =
-                            pointOnLine (offset / l2) p2 p3
-                    in
+        path =
+            points
+                |> GeometryHelpers.roundedPolygonPoints radius
+                |> List.concatMap (\(r, mid, end) ->
                     [ L mid , A r r 0 0 1 end ]
-
                 )
-                points
-                (shift 1)
-                (shift 2)
-                |> List.concat
 
         lastPoint =
             M (0, 0) els
                 |> Evg.Path.endPoint
 
     in
-    Evg.path attrs (M lastPoint els |> Evg.Path.close)
+    Evg.path attrs (M lastPoint path |> Evg.Path.close)
 
 
 ngon : List (Evg.Attribute { a | cornerRadius : Supported } msg) -> { sides : Int, circumference : Float , center : ( Float , Float ) } -> Evg c msg
@@ -379,22 +375,19 @@ ngon attrs args =
         sides =
             max 3 args.sides
 
-        n =
-            toFloat sides
-
         angle =
-            2 * pi / n
+            GeometryHelpers.regularPolygonAngle sides
 
         radius =
             max 0 args.circumference
 
         points =
             List.range 1 sides
-                |> List.map
-                    (\index ->
-                        ( args.cx + radius * cos (toFloat index * angle)
-                        , args.cy + radius * sin (toFloat index * angle)
-                        )
+                |> List.map (\index ->
+                    GeometryHelpers.polarToCartesian
+                        args.center
+                        (toFloat index * angle)
+                        radius
                     )
     in
     roundedPolygon attrs points
@@ -675,7 +668,9 @@ splashText  =
         [ Evg.fillStr "#16B5FF"
         , Evg.fontFamily "'Racing Sans One', cursive"
         , Evg.fontSize 160
-        , Evg.filter [ Filter.relativeRect { x = -0.25, y = -0.25, width = 1.5, height = 1.6} ] filter
+        , Evg.filter
+            [ Filter.relativeRect { x = -0.25, y = -0.25, width = 1.5, height = 1.6} ]
+            filter
         ]
 
 
