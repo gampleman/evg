@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <!-- control lines -->
+  <line x1="20" y1="90" x2="50" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+  <line x1="180" y1="90" x2="150" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+  <!-- curve -->
+  <path d="M 20 90 C 50 20, 150 20, 180 90" fill="none" stroke="#333" stroke-width="2"/>
+  <!-- points -->
+  <circle cx="20" cy="90" r="4" fill="#e53935"/>
+  <circle cx="50" cy="20" r="4" fill="#ff9800"/>
+  <circle cx="150" cy="20" r="4" fill="#ff9800"/>
+  <circle cx="180" cy="90" r="4" fill="#1e88e5"/>
+  <!-- labels -->
+  <text x="20" y="105" font-size="9" fill="#e53935" text-anchor="middle">start</text>
+  <text x="50" y="14" font-size="9" fill="#ff9800" text-anchor="middle">cp1</text>
+  <text x="150" y="14" font-size="9" fill="#ff9800" text-anchor="middle">cp2</text>
+  <text x="180" y="105" font-size="9" fill="#1e88e5" text-anchor="middle">end</text>
+</svg>

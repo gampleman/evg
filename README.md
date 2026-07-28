@@ -883,7 +883,7 @@ Possibly we'll also support some of the native SMIL event handling primitives, s
 
   | elm/svg                       | elm-community/typed-svg             | gampleman/evg                 |
   | ----------------------------- | ----------------------------------- | ----------------------------- |
-  | ![](docs/images/docs-svg.png) | ![](docs/images/docs-typed-svg.png) | ![](docs/images/docs-evg.png) |
+  | <img src="docs/images/docs-svg.png" alt="elm/svg documentation" /> | <img src="docs/images/docs-typed-svg.png" alt="typed-svg documentation" /> | <img src="docs/images/docs-evg.png" alt="evg documentation" /> |
 
 ## Like it? Build it!
 

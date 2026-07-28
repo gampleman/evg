@@ -21,6 +21,8 @@
     "fix": "npm-run-all --print-name --sequential fix:format fix:review",
     "fix:format": "elm-format src/ tests/*.elm review --yes",
     "fix:review": "elm-review --fix",
+    "docs:generate": "node docs/generate.js",
+    "examples:serve": "node examples/serve.js",
     "start": "npm-run-all -p -l start:docs",
     "start:docs": "elm-doc-preview",
     "elm-bump": "npm-run-all --print-name --sequential test bump-version 'test:review -- --fix-all-without-prompt'",

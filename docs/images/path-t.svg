@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 100" width="220" height="100">
+  <!-- first Q curve -->
+  <line x1="20" y1="70" x2="55" y2="15" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+  <line x1="55" y1="15" x2="90" y2="70" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
+  <path d="M 20 70 Q 55 15, 90 70" fill="none" stroke="#333" stroke-width="2"/>
+  <!-- T continuation (reflected control) -->
+  <line x1="90" y1="70" x2="125" y2="125" stroke="#ddd" stroke-width="1" stroke-dasharray="2 2"/>
+  <path d="M 90 70 T 160 70" fill="none" stroke="#1e88e5" stroke-width="2"/>
+  <!-- points -->
+  <circle cx="20" cy="70" r="4" fill="#e53935"/>
+  <circle cx="55" cy="15" r="3" fill="#ff9800"/>
+  <circle cx="90" cy="70" r="4" fill="#888"/>
+  <circle cx="125" cy="125" r="3" fill="none" stroke="#ff9800" stroke-dasharray="2 2"/>
+  <circle cx="160" cy="70" r="4" fill="#1e88e5"/>
+  <!-- labels -->
+  <text x="55" y="10" font-size="9" fill="#ff9800" text-anchor="middle">control</text>
+  <text x="125" y="90" font-size="9" fill="#ff9800" text-anchor="middle">reflected</text>
+  <text x="160" y="85" font-size="9" fill="#1e88e5" text-anchor="middle">end</text>
+</svg>
