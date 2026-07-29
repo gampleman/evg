@@ -869,11 +869,13 @@ to an `.svg` file with the same code.
 
     Evg.toString []
         { width = 100, height = 100 }
-        [ Evg.circle [] { r = 40, center = ( 50, 50 ) } ]
+        [ Evg.circle []
+            { r = 40, center = ( 50, 50 ) }
+        ]
 
-This produces markup like:
-
-    "<svg xmlns=\"...\" viewBox=\"0 0 100 100\" ...>...</svg>"
+The result is a complete SVG document: an `<svg>` root carrying the namespace
+and viewBox, containing a `<circle>` element with the radius and center you
+gave.
 
 Useful for generating image files in scripts, snapshot-testing drawings, or
 rendering on a server. A few things behave differently from live rendering:

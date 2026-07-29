@@ -105,12 +105,30 @@ turbulenceSvg =
         turb =
             Filter.turbulence
                 { baseFrequency = 0.05, numOctaves = 2, seed = 1, stitchTiles = False }
+
+        -- Turbulence generates its texture from nothing, ignoring whatever
+        -- shape it is applied to. Its main practical use is as the guide
+        -- image for displacementMap, so the picture shows the texture and
+        -- then what it does to a shape.
+        warped =
+            turb
+                |> Filter.displacementMapWithChannelSelector
+                    { scale = 6
+                    , xChannelSelector = Filter.Red
+                    , yChannelSelector = Filter.Green
+                    }
+                    Filter.sourceGraphic
     in
-    docImage { width = 150, height = 80 }
-        [ Evg.rect [ Evg.fillStr "mediumseagreen" ]
-            { x = 18, y = 20, width = 40, height = 40 }
-        , Evg.rect [ Evg.fillStr "mediumseagreen", Evg.filter turb ]
-            { x = 92, y = 20, width = 40, height = 40 }
+    docImage { width = 260, height = 80 }
+        [ Evg.rect [ Evg.fillStr "mediumseagreen", Evg.filter turb ]
+            { x = 20, y = 14, width = 44, height = 44 }
+        , label ( 42, 74 ) "the texture"
+        , Evg.rect [ Evg.fillStr "mediumseagreen" ]
+            { x = 108, y = 14, width = 44, height = 44 }
+        , label ( 130, 74 ) "a shape"
+        , Evg.rect [ Evg.fillStr "mediumseagreen", Evg.filter warped ]
+            { x = 196, y = 14, width = 44, height = 44 }
+        , label ( 218, 74 ) "warped by it"
         ]
 
 
@@ -199,17 +217,37 @@ erodeSvg =
 floodSvg : String
 floodSvg =
     let
-        floodFilter =
-            Filter.compositeOver Filter.sourceGraphic (Filter.floodStr "teal")
+        -- Flood on its own: a solid rectangle covering the whole filter area,
+        -- which hides the shape underneath entirely.
+        floodAlone =
+            Filter.floodStr "teal"
+
+        -- Flood cut down to the shape's own silhouette, which is what makes
+        -- it useful: the star is recolored rather than covered up.
+        floodInShape =
+            Filter.compositeIn (Filter.floodStr "teal") Filter.sourceAlpha
+
+        star =
+            [ ( 30, 10 ), ( 37, 28 ), ( 56, 28 ), ( 41, 40 ), ( 47, 58 ), ( 30, 47 ), ( 13, 58 ), ( 19, 40 ), ( 4, 28 ), ( 23, 28 ) ]
+
+        shiftedStar dx =
+            List.map (\( px, py ) -> ( px + dx, py )) star
     in
-    docImage { width = 150, height = 80 }
-        [ Evg.circle
+    docImage { width = 260, height = 80 }
+        [ Evg.polygon [ Evg.fillStr "gold" ] (shiftedStar 10)
+        , label ( 40, 74 ) "the shape"
+        , Evg.polygon
             [ Evg.fillStr "gold"
-            , Evg.filterWithCoordinates
-                (Evg.userSpace { x = 20, y = 14, width = 110, height = 52 })
-                floodFilter
+            , Evg.filter floodAlone
             ]
-            { r = 12, center = ( 75, 40 ) }
+            (shiftedStar 94)
+        , label ( 124, 74 ) "flood alone"
+        , Evg.polygon
+            [ Evg.fillStr "gold"
+            , Evg.filter floodInShape
+            ]
+            (shiftedStar 178)
+        , label ( 208, 74 ) "flood in silhouette"
         ]
 
 
@@ -324,36 +362,43 @@ convolveSvg =
 subregionSvg : String
 subregionSvg =
     let
-        region =
-            Evg.objectBoundingBox { x = -0.5, y = -0.5, width = 2, height = 2 }
+        -- The whole shape blurred, for comparison.
+        wholeBlur =
+            Filter.sourceGraphic |> Filter.gaussianBlur 3
 
-        freeBlur =
-            Filter.sourceGraphic |> Filter.gaussianBlur 4
+        -- The same blur confined to the lower half of the filter area, merged
+        -- back over the untouched original. This is the doc's own example, and
+        -- the sharp-to-blurred boundary makes the subregion edge obvious.
+        bottomHalfBlur =
+            Filter.merge
+                [ Filter.sourceGraphic
+                , Filter.sourceGraphic
+                    |> Filter.gaussianBlur 3
+                    |> Filter.withinSubregion
+                        { x = 0, y = 0.5, width = 1, height = 0.5 }
+                ]
 
-        clippedBlur =
-            Filter.sourceGraphic
-                |> Filter.gaussianBlur 4
-                |> Filter.withinSubregion
-                    { x = 0.3125, y = 0.3125, width = 0.375, height = 0.375 }
+        star =
+            [ ( 30, 6 ), ( 37, 24 ), ( 56, 24 ), ( 41, 36 ), ( 47, 54 ), ( 30, 43 ), ( 13, 54 ), ( 19, 36 ), ( 4, 24 ), ( 23, 24 ) ]
+
+        shiftedStar dx =
+            List.map (\( px, py ) -> ( px + dx, py )) star
     in
-    docImage { width = 150, height = 80 }
-        [ Evg.circle
+    docImage { width = 240, height = 80 }
+        [ Evg.polygon [ Evg.fillStr "rebeccapurple" ] (shiftedStar 6)
+        , label ( 36, 74 ) "no filter"
+        , Evg.polygon
             [ Evg.fillStr "rebeccapurple"
-            , Evg.filterWithCoordinates region freeBlur
+            , Evg.filter wholeBlur
             ]
-            { r = 16, center = ( 38, 40 ) }
-        , Evg.circle
+            (shiftedStar 90)
+        , label ( 120, 74 ) "blurred"
+        , Evg.polygon
             [ Evg.fillStr "rebeccapurple"
-            , Evg.filterWithCoordinates region clippedBlur
+            , Evg.filter bottomHalfBlur
             ]
-            { r = 16, center = ( 112, 40 ) }
-        , Evg.rect
-            [ Evg.fillStr "none"
-            , Evg.strokeStr "#555"
-            , Evg.strokeWidth 1
-            , Evg.dashPattern [ 3, 2 ]
-            ]
-            { x = 100, y = 28, width = 24, height = 24 }
+            (shiftedStar 174)
+        , label ( 204, 74 ) "lower half only"
         ]
 
 

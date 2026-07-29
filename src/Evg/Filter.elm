@@ -296,6 +296,10 @@ guide image for `displacementMap` to make things look warped or hand-drawn.
 
 This fills the area with a colorful, smoky cloud texture.
 
+Note that the texture is generated from nothing: whatever shape you apply
+this to is replaced by noise rather than textured. To affect a shape, feed
+the noise into [`displacementMap`](#displacementMap).
+
 The options:
 
   - `baseFrequency` controls how fine the noise is (smaller values give larger features)
@@ -922,7 +926,12 @@ the guide image for `displacementMap`. The options mean the same as in
 
 This fills the area with a sharp, swirling colored texture.
 
-![turbulence example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-turbulence.svg)
+Note that the texture is generated from nothing: whatever shape you apply
+this to is replaced by noise rather than textured. To affect a shape, feed
+the noise into [`displacementMap`](#displacementMap), which uses it to push
+the shape's pixels around.
+
+![turbulence as a displacement guide](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-turbulence.svg)
 
 -}
 turbulence : { baseFrequency : Float, numOctaves : Int, seed : Int, stitchTiles : Bool } -> Filter

@@ -155,17 +155,65 @@ smoothQuadratic =
         ]
 
 
+{-| One panel of the arc diagram: the same two endpoints and radii every time,
+with only the largeArc and sweep flags changing. The four panels together are
+the four arcs those flags can pick out.
+-}
+arcPanel : ( Float, Float ) -> Bool -> Bool -> Evg.Evg Never
+arcPanel ( ox, oy ) largeArc sweep =
+    let
+        -- The endpoints sit at the vertical middle of the panel, so the two
+        -- possible circles extend equally above and below them.
+        from =
+            ( ox + 22, oy + 58 )
+
+        to =
+            ( ox + 62, oy + 58 )
+
+        -- Labelled with the Elm values the API takes, not SVG's 1/0 encoding.
+        flag b =
+            if b then
+                "True"
+
+            else
+                "False"
+    in
+    Evg.group []
+        [ -- The three arcs not being shown, faint, for context.
+          Evg.path
+            [ Evg.fillStr "none", Evg.strokeStr "#e8e8e8", Evg.strokeWidth 1.5 ]
+            [ M from [ A 30 30 0 (not largeArc) sweep to ]
+            , M from [ A 30 30 0 largeArc (not sweep) to ]
+            , M from [ A 30 30 0 (not largeArc) (not sweep) to ]
+            ]
+        , Evg.path
+            [ Evg.fillStr "none", Evg.strokeStr "#1e88e5", Evg.strokeWidth 2.5 ]
+            [ M from [ A 30 30 0 largeArc sweep to ] ]
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 3.5, center = from }
+        , Evg.circle [ Evg.fillStr "#333" ] { r = 3.5, center = to }
+        , Evg.text
+            [ Evg.fontSize 9, Evg.fontFamily "sans-serif", Evg.fillStr "#555" ]
+            { x = ox + 42, y = oy + 118, anchor = Evg.Middle }
+            ("largeArc=" ++ flag largeArc ++ " sweep=" ++ flag sweep)
+        ]
+
+
+{-| All four arcs that share a pair of endpoints. The blue arc is the one the
+flags select; the pale arcs are the other three possibilities.
+-}
 arc : String
 arc =
-    docImage { width = 200, height = 140 }
-        [ Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
-            [ M ( 75, 85 ) [ A 40 40 0 True True ( 125, 85 ) ] ]
-        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#1e88e5", Evg.strokeWidth 2, Evg.dashPattern [ 4, 3 ] ]
-            [ M ( 75, 85 ) [ A 40 40 0 False True ( 125, 85 ) ] ]
-        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 75, 85 ) }
-        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 125, 85 ) }
-        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#333" ] { x = 100, y = 14, anchor = Evg.Middle } "large-arc=1 (solid)"
-        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 100, y = 120, anchor = Evg.Middle } "large-arc=0 (dashed)"
-        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#e53935" ] { x = 62, y = 88, anchor = Evg.End } "start"
-        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 138, y = 88, anchor = Evg.Start } "end"
+    docImage { width = 380, height = 260 }
+        [ arcPanel ( 26, 4 ) True True
+        , arcPanel ( 216, 4 ) True False
+        , arcPanel ( 26, 134 ) False True
+        , arcPanel ( 216, 134 ) False False
+        , Evg.text
+            [ Evg.fontSize 9, Evg.fontFamily "sans-serif", Evg.fillStr "#e53935" ]
+            { x = 43, y = 76, anchor = Evg.End }
+            "start"
+        , Evg.text
+            [ Evg.fontSize 9, Evg.fontFamily "sans-serif", Evg.fillStr "#333" ]
+            { x = 95, y = 76, anchor = Evg.Start }
+            "end"
         ]

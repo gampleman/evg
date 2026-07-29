@@ -337,10 +337,12 @@ short way round, on either side of the line between the points. Two flags
 pick which one you get. `largeArc = True` chooses the longer route, and
 `sweep = True` makes the pen curve clockwise rather than counterclockwise.
 
-In the picture, both arcs share the same start, end, and radii; the solid
-one has `largeArc = True` and the dashed one has `largeArc = False`:
+Every panel in the picture uses the same start point, end point, and radii.
+Only the two flags differ, and each combination picks out a different one of
+the four arcs. The blue arc is the one selected; the pale arcs are the other
+three possibilities:
 
-![two arcs between the same two points, a long solid one over the top and a short dashed one](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/path-a.svg)
+![the four arcs between the same two points, one per combination of the largeArc and sweep flags](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/path-a.svg)
 
 The end point is an offset from the current pen position:
 
