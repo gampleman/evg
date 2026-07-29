@@ -1,3 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
-  <polyline points="10,50 30,10 50,40 70,20 90,45 110,15" fill="none" stroke="black" stroke-width="2"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="240" height="120"><polyline points="10,50 30,10 50,40 70,20 90,45 110,15" fill="none" stroke="black" stroke-width="2"/></svg>

@@ -42,7 +42,6 @@ circle's edge is crisp.
 import Bitwise
 import Evg
 import Evg.Internal as Internal exposing (Attribute(..), Def(..))
-import Svg
 import Svg.Attributes
 
 
@@ -98,12 +97,12 @@ clip evg =
         (Svg.Attributes.clipPath ("url(#" ++ id ++ ")"))
         (Def id
             (Internal.Evg
-                { render = \_ -> Svg.clipPath [ Svg.Attributes.id id ]
+                { content = Internal.Tag "clipPath" [ Svg.Attributes.id id ] []
                 , ownMatrix = Internal.identityMat
                 , children = [ evg ]
                 , hash = 0
                 , defs = []
-                , attrs = []
+                , attrs = [ ( "id", id ) ]
                 }
             )
         )
@@ -156,12 +155,12 @@ clipWithCoordinates space evg =
         (Svg.Attributes.clipPath ("url(#" ++ id ++ ")"))
         (Def id
             (Internal.Evg
-                { render = \_ -> Svg.clipPath (Svg.Attributes.id id :: Internal.coordinateSpaceAttrs Svg.Attributes.clipPathUnits space)
+                { content = Internal.Tag "clipPath" (Svg.Attributes.id id :: Internal.coordinateSpaceAttrs Svg.Attributes.clipPathUnits space) []
                 , ownMatrix = Internal.identityMat
                 , children = [ evg ]
                 , hash = 0
                 , defs = []
-                , attrs = []
+                , attrs = ( "id", id ) :: Internal.coordinateSpaceData "clipPathUnits" space
                 }
             )
         )

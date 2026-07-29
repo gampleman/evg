@@ -1029,12 +1029,12 @@ buildSegmentedTimeline options globalEasing dur runs =
                                 wrappedNode =
                                     Svg.g [ Svg.Attributes.visibility "hidden" ] [ animatedNode, visibilityAnim ]
                             in
-                            Internal.Evg { render = \_ _ -> wrappedNode, ownMatrix = Internal.identityMat, children = [], hash = 0, defs = firstRecord.defs, attrs = [] }
+                            Internal.Evg { content = Internal.Raw wrappedNode, ownMatrix = Internal.identityMat, children = [], hash = 0, defs = firstRecord.defs, attrs = [] }
                 )
                 runs
     in
     Internal.Evg
-        { render = \_ -> Svg.g []
+        { content = Internal.Tag "g" [] []
         , ownMatrix = Internal.identityMat
         , children = runChildren
         , hash = 0

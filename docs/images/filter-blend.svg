@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" width="560" height="128">
+  <defs>
+    <filter id="blend-normal" filterUnits="userSpaceOnUse" x="4" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="24" y="18" width="22" height="22" result="sq"/>
+      <feBlend in="SourceGraphic" in2="sq" mode="normal"/>
+    </filter>
+    <filter id="blend-multiply" filterUnits="userSpaceOnUse" x="60" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="80" y="18" width="22" height="22" result="sq"/>
+      <feBlend in="SourceGraphic" in2="sq" mode="multiply"/>
+    </filter>
+    <filter id="blend-screen" filterUnits="userSpaceOnUse" x="116" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="136" y="18" width="22" height="22" result="sq"/>
+      <feBlend in="SourceGraphic" in2="sq" mode="screen"/>
+    </filter>
+    <filter id="blend-darken" filterUnits="userSpaceOnUse" x="172" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="192" y="18" width="22" height="22" result="sq"/>
+      <feBlend in="SourceGraphic" in2="sq" mode="darken"/>
+    </filter>
+    <filter id="blend-lighten" filterUnits="userSpaceOnUse" x="228" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="248" y="18" width="22" height="22" result="sq"/>
+      <feBlend in="SourceGraphic" in2="sq" mode="lighten"/>
+    </filter>
+  </defs>
+  <circle cx="24" cy="24" r="13" fill="tomato" filter="url(#blend-normal)"/>
+  <circle cx="80" cy="24" r="13" fill="tomato" filter="url(#blend-multiply)"/>
+  <circle cx="136" cy="24" r="13" fill="tomato" filter="url(#blend-screen)"/>
+  <circle cx="192" cy="24" r="13" fill="tomato" filter="url(#blend-darken)"/>
+  <circle cx="248" cy="24" r="13" fill="tomato" filter="url(#blend-lighten)"/>
+  <text x="28" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">normal</text>
+  <text x="84" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">multiply</text>
+  <text x="140" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">screen</text>
+  <text x="196" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">darken</text>
+  <text x="252" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">lighten</text>
+</svg>

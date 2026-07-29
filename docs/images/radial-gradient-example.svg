@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-  <defs>
-    <radialGradient id="rg" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="rgb(255,255,255)"/>
-      <stop offset="1" stop-color="rgb(0,0,0)"/>
-    </radialGradient>
-  </defs>
-  <rect x="0" y="0" width="100" height="100" fill="url(#rg)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="200" height="200"><defs><radialGradient id="e-764070472" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="rgba(100%,100%,100%,1)" stop-opacity="1"/><stop offset="1" stop-color="rgba(0%,0%,0%,1)" stop-opacity="1"/></radialGradient></defs><rect x="0" y="0" width="100" height="100" fill="url(#e-764070472)"/></svg>

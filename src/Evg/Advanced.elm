@@ -55,7 +55,6 @@ import Bitwise
 import Dict
 import Evg
 import Evg.Internal as Internal exposing (Attribute(..))
-import Svg
 import Svg.Attributes
 import VirtualDom
 
@@ -220,7 +219,7 @@ customElement tag attrs children =
         { vdomAttrs, eventBuilders, ownMatrix, defs, inspectable } =
             Internal.svgAttributes attrs
     in
-    Internal.element (Svg.node tag) (Bitwise.xor (Internal.hashStringToInt tag) (Internal.attrHash attrs)) vdomAttrs eventBuilders ownMatrix inspectable children defs
+    Internal.element tag (Bitwise.xor (Internal.hashStringToInt tag) (Internal.attrHash attrs)) vdomAttrs eventBuilders ownMatrix inspectable children defs
 
 
 {-| Creates a raw SVG attribute. Use this when you need an attribute that this
@@ -248,15 +247,29 @@ by changing `x` and `y` without touching any child coordinates.
             { r = 50, center = ( 50, 50 ) }
         ]
 
+A nested area can also carry its own [`viewBox`](#viewBox), which rescales
+whatever the children draw to fit the area. That makes it a window onto a
+sub-scene: here a drawing that uses coordinates up to 1000 is shown inside a
+100 by 100 box, letterboxed if the proportions differ.
+
+    Advanced.nestedSvg
+        [ Advanced.viewBox 0 0 1000 1000
+        , Advanced.preserveAspectRatio
+            Advanced.XMidYMid
+            Advanced.Meet
+        ]
+        { x = 50, y = 50, width = 100, height = 100 }
+        [ bigSubScene ]
+
 -}
 nestedSvg :
-    List (Evg.Attribute {} msg)
+    List (Evg.Attribute { viewBox : Evg.Supported, opacity : Evg.Supported, filter : Evg.Supported, events : Evg.Supported } msg)
     -> { x : Float, y : Float, width : Float, height : Float }
     -> List (Internal.Evg msg)
     -> Internal.Evg msg
 nestedSvg attrs { x, y, width, height } children =
     let
-        { vdomAttrs, eventBuilders, defs } =
+        { vdomAttrs, eventBuilders, defs, inspectable } =
             Internal.svgAttributes attrs
 
         baseAttrs =
@@ -274,17 +287,23 @@ nestedSvg attrs { x, y, width, height } children =
     -- these children is this nested viewport rather than the root. So event
     -- handlers here decode against the identity matrix (their local space is
     -- what the browser already reports), and children start a fresh matrix.
+    -- The builders are wrapped to ignore the accumulated parent matrix.
     Internal.Evg
-        { render =
-            \_ _ ->
-                Svg.svg
-                    (baseAttrs ++ vdomAttrs ++ List.map (\build -> build Internal.identityMat) eventBuilders)
-                    (List.map Internal.toNode children)
+        { content =
+            Internal.Tag "svg"
+                (baseAttrs ++ vdomAttrs)
+                (List.map (\build -> \_ -> build Internal.identityMat) eventBuilders)
         , ownMatrix = Internal.identityMat
-        , children = []
+        , children = children
         , hash = 0
         , defs = defs ++ childDefs
-        , attrs = []
+        , attrs =
+            [ ( "x", String.fromFloat x )
+            , ( "y", String.fromFloat y )
+            , ( "width", String.fromFloat width )
+            , ( "height", String.fromFloat height )
+            ]
+                ++ inspectable
         }
 
 
@@ -299,7 +318,7 @@ nestedSvg attrs { x, y, width, height } children =
 -}
 link : String -> Evg.Evg msg -> Internal.Evg msg
 link href child =
-    Internal.element Svg.a (Internal.mixString href aHash_) [ Svg.Attributes.xlinkHref href ] [] Internal.identityMat [] [ child ] []
+    Internal.element "a" (Internal.mixString href aHash_) [ Svg.Attributes.xlinkHref href ] [] Internal.identityMat [] [ child ] []
 
 
 {-| Sets the ARIA role for assistive technology.

@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 80" width="160" height="80">
-  <path d="M 20 60 L 140 20" fill="none" stroke="#333" stroke-width="2"/>
-  <circle cx="20" cy="60" r="4" fill="#e53935"/>
-  <circle cx="140" cy="20" r="4" fill="#1e88e5"/>
-  <text x="20" y="75" font-size="10" fill="#e53935" text-anchor="middle">start</text>
-  <text x="140" y="15" font-size="10" fill="#1e88e5" text-anchor="middle">end</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 80" width="320" height="160"><path d="M20 60L140 20" fill="none" stroke="#333" stroke-width="2"/><circle r="4" cx="20" cy="60" fill="#e53935"/><circle r="4" cx="140" cy="20" fill="#1e88e5"/><text x="20" y="75" text-anchor="middle" font-size="10px" fill="#e53935">start</text><text x="140" y="15" text-anchor="middle" font-size="10px" fill="#1e88e5">end</text></svg>

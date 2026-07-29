@@ -60,7 +60,9 @@ mixed up, so name them uniquely.
 lazy : String -> (a -> Evg msg) -> a -> Evg msg
 lazy key fn a =
     Internal.Evg
-        { render = \_ _ -> VirtualDom.lazy2 renderLazy fn a
+        { content =
+            Internal.RawLazy (VirtualDom.lazy2 renderLazy fn a)
+                (\() -> fn a)
         , ownMatrix = Internal.identityMat
         , children = []
         , hash = Internal.hashStringToInt key
@@ -74,7 +76,9 @@ lazy key fn a =
 lazy2 : String -> (a -> b -> Evg msg) -> a -> b -> Evg msg
 lazy2 key fn a b =
     Internal.Evg
-        { render = \_ _ -> VirtualDom.lazy3 renderLazy2 fn a b
+        { content =
+            Internal.RawLazy (VirtualDom.lazy3 renderLazy2 fn a b)
+                (\() -> fn a b)
         , ownMatrix = Internal.identityMat
         , children = []
         , hash = Internal.hashStringToInt key
@@ -88,7 +92,9 @@ lazy2 key fn a b =
 lazy3 : String -> (a -> b -> c -> Evg msg) -> a -> b -> c -> Evg msg
 lazy3 key fn a b c =
     Internal.Evg
-        { render = \_ _ -> VirtualDom.lazy4 renderLazy3 fn a b c
+        { content =
+            Internal.RawLazy (VirtualDom.lazy4 renderLazy3 fn a b c)
+                (\() -> fn a b c)
         , ownMatrix = Internal.identityMat
         , children = []
         , hash = Internal.hashStringToInt key
@@ -152,19 +158,20 @@ asDef :
         )
 asDef evg =
     let
-        node =
-            Internal.toNode evg
-
         id =
             "sym-" ++ Internal.contentHash evg
 
-        symbolNode =
-            Svg.symbol
-                [ Svg.Attributes.id id ]
-                [ node ]
-
         def =
-            Def id (Internal.wrapNode symbolNode)
+            Def id
+                (Internal.element "symbol"
+                    (Internal.hashStringToInt id)
+                    [ Svg.Attributes.id id ]
+                    []
+                    Internal.identityMat
+                    [ ( "id", id ) ]
+                    [ evg ]
+                    []
+                )
     in
     \attrs rect ->
         let
@@ -187,7 +194,7 @@ asDef evg =
                     |> Internal.mixFloat rect.width
                     |> Internal.mixFloat rect.height
         in
-        Internal.element Svg.use
+        Internal.element "use"
             hash
             (baseAttrs ++ vdomAttrs)
             eventBuilders

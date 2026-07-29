@@ -1,7 +1,19 @@
 module MaskDiagrams exposing (svgs)
 
 {-| Generates documentation images for the Evg.Mask module.
+
+These are produced with `Evg.toString` itself, so the pictures in the docs
+are guaranteed to show what the library actually renders.
+
 -}
+
+import Color
+import Evg
+import Evg.Advanced as Advanced
+import Evg.Clip as Clip
+import Evg.Mask as Mask
+import Evg.Paint as Paint
+import Evg.Transform as Transform
 
 
 type alias DocSvg =
@@ -14,29 +26,55 @@ svgs =
     ]
 
 
+{-| Render at double display size: the width/height attributes are twice the
+viewBox, keeping the drawing coordinates unchanged.
+-}
+docImage : { width : Float, height : Float } -> List (Evg.Evg Never) -> String
+docImage dims children =
+    Evg.toString
+        [ Advanced.viewBox 0 0 dims.width dims.height ]
+        { width = dims.width * 2, height = dims.height * 2 }
+        children
+
+
+photo : Paint.Paint
+photo =
+    Paint.linearGradient ( 0, 0 )
+        ( 1, 1 )
+        [ Paint.stopStr 0 "#ff8c00"
+        , Paint.stopStr 0.5 "#e0407b"
+        , Paint.stopStr 1 "#4b0082"
+        ]
+
+
+softCircle : Evg.Evg Never
+softCircle =
+    Evg.circle
+        [ Evg.fill
+            (Paint.radialGradient ( 0.5, 0.5 )
+                0.5
+                [ Paint.stop 0 (Color.rgb255 255 255 255)
+                , Paint.stop 0.6 (Color.rgb255 255 255 255)
+                , Paint.stop 1 (Color.rgb255 0 0 0)
+                ]
+            )
+        ]
+        { r = 40, center = ( 50, 50 ) }
+
+
 clipVsMaskSvg : String
 clipVsMaskSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 210 100" width="210" height="100">
-  <defs>
-    <linearGradient id="cm-photo" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff8c00"/>
-      <stop offset="0.5" stop-color="#e0407b"/>
-      <stop offset="1" stop-color="#4b0082"/>
-    </linearGradient>
-    <clipPath id="cm-clip">
-      <circle cx="50" cy="50" r="40"/>
-    </clipPath>
-    <radialGradient id="cm-soft" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="white"/>
-      <stop offset="0.6" stop-color="white"/>
-      <stop offset="1" stop-color="black"/>
-    </radialGradient>
-    <mask id="cm-mask">
-      <circle cx="50" cy="50" r="40" fill="url(#cm-soft)"/>
-    </mask>
-  </defs>
-  <rect x="10" y="10" width="80" height="80" fill="url(#cm-photo)" clip-path="url(#cm-clip)"/>
-  <g transform="translate(110 0)">
-    <rect x="10" y="10" width="80" height="80" fill="url(#cm-photo)" mask="url(#cm-mask)"/>
-  </g>
-</svg>"""
+    docImage { width = 210, height = 100 }
+        [ Evg.rect
+            [ Evg.fill photo
+            , Clip.clip (Evg.circle [] { r = 40, center = ( 50, 50 ) })
+            ]
+            { x = 10, y = 10, width = 80, height = 80 }
+        , Evg.group [ Transform.translate 110 0 ]
+            [ Evg.rect
+                [ Evg.fill photo
+                , Mask.luminance softCircle
+                ]
+                { x = 10, y = 10, width = 80, height = 80 }
+            ]
+        ]

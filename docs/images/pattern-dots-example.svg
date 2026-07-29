@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
-  <defs>
-    <pattern id="dots" width="10" height="10" patternUnits="userSpaceOnUse" viewBox="0 0 10 10">
-      <rect x="0" y="0" width="10" height="10" fill="white"/>
-      <circle cx="5" cy="5" r="3" fill="red"/>
-    </pattern>
-  </defs>
-  <rect x="0" y="0" width="120" height="60" fill="url(#dots)" stroke="#999" stroke-width="1"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="240" height="120"><defs><pattern id="e1669076949" width="10" height="10" patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse" viewBox="0 0 10 10"><rect x="0" y="0" width="10" height="10" fill="white"/><circle r="3" cx="5" cy="5" fill="red"/></pattern></defs><rect x="0" y="0" width="120" height="60" fill="url(#e1669076949)" stroke="#999" stroke-width="1"/></svg>

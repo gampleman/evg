@@ -48,7 +48,6 @@ marker can be any shape you like.
 
 import Evg
 import Evg.Internal as Internal exposing (Attribute(..), Def(..), Supported)
-import Svg
 import Svg.Attributes
 import VirtualDom
 
@@ -58,7 +57,7 @@ or the end of lines and paths. Build one with `marker` or `markerUserSpace`,
 then attach it with `markerStart`, `markerMid`, or `markerEnd`.
 -}
 type Marker msg
-    = Marker Int (VirtualDom.Node msg)
+    = Marker Int (Internal.Evg msg)
 
 
 {-| Controls how the marker turns to follow the line it sits on.
@@ -160,9 +159,6 @@ buildMarker :
     -> Marker msg
 buildMarker attrs units config orientation content =
     let
-        node =
-            Internal.toNode content
-
         orientStr =
             case orientation of
                 AutoOrientation ->
@@ -187,21 +183,37 @@ buildMarker attrs units config orientation content =
         id =
             "e" ++ String.fromInt hash
 
-        markerNode =
-            Svg.marker
-                ([ Svg.Attributes.id id
-                 , Svg.Attributes.markerWidth (String.fromFloat config.width)
-                 , Svg.Attributes.markerHeight (String.fromFloat config.height)
-                 , Svg.Attributes.refX (String.fromFloat config.refX)
-                 , Svg.Attributes.refY (String.fromFloat config.refY)
-                 , Svg.Attributes.orient orientStr
-                 , Svg.Attributes.markerUnits units
-                 ]
-                    ++ markerExtraAttrs attrs
-                )
-                [ node ]
+        markerEvg =
+            Internal.Evg
+                { content =
+                    Internal.Tag "marker"
+                        ([ Svg.Attributes.id id
+                         , Svg.Attributes.markerWidth (String.fromFloat config.width)
+                         , Svg.Attributes.markerHeight (String.fromFloat config.height)
+                         , Svg.Attributes.refX (String.fromFloat config.refX)
+                         , Svg.Attributes.refY (String.fromFloat config.refY)
+                         , Svg.Attributes.orient orientStr
+                         , Svg.Attributes.markerUnits units
+                         ]
+                            ++ markerExtraAttrs attrs
+                        )
+                        []
+                , ownMatrix = Internal.identityMat
+                , children = [ content ]
+                , hash = hash
+                , defs = []
+                , attrs =
+                    [ ( "id", id )
+                    , ( "markerWidth", String.fromFloat config.width )
+                    , ( "markerHeight", String.fromFloat config.height )
+                    , ( "refX", String.fromFloat config.refX )
+                    , ( "refY", String.fromFloat config.refY )
+                    , ( "orient", orientStr )
+                    , ( "markerUnits", units )
+                    ]
+                }
     in
-    Marker hash markerNode
+    Marker hash markerEvg
 
 
 {-| Stamps a marker at the first point of a line, polyline, or path.
@@ -221,7 +233,7 @@ markerStart (Marker hash node) =
         "marker-start"
         ("url(#" ++ id ++ ")")
         (Svg.Attributes.markerStart ("url(#" ++ id ++ ")"))
-        (Def id (Internal.wrapNode node))
+        (Def id node)
 
 
 {-| Stamps a marker at every corner of a polyline or path between the first
@@ -245,7 +257,7 @@ markerMid (Marker hash node) =
         "marker-mid"
         ("url(#" ++ id ++ ")")
         (Svg.Attributes.markerMid ("url(#" ++ id ++ ")"))
-        (Def id (Internal.wrapNode node))
+        (Def id node)
 
 
 {-| Stamps a marker at the last point of a line, polyline, or path. This is
@@ -267,7 +279,7 @@ markerEnd (Marker hash node) =
         "marker-end"
         ("url(#" ++ id ++ ")")
         (Svg.Attributes.markerEnd ("url(#" ++ id ++ ")"))
-        (Def id (Internal.wrapNode node))
+        (Def id node)
 
 
 markerExtraAttrs : List (Internal.Attribute a Never) -> List (VirtualDom.Attribute msg)

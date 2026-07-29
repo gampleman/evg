@@ -1,15 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="160" height="100">
-  <!-- control lines -->
-  <line x1="20" y1="80" x2="80" y2="15" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <line x1="80" y1="15" x2="140" y2="80" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <!-- curve -->
-  <path d="M 20 80 Q 80 15, 140 80" fill="none" stroke="#333" stroke-width="2"/>
-  <!-- points -->
-  <circle cx="20" cy="80" r="4" fill="#e53935"/>
-  <circle cx="80" cy="15" r="4" fill="#ff9800"/>
-  <circle cx="140" cy="80" r="4" fill="#1e88e5"/>
-  <!-- labels -->
-  <text x="20" y="95" font-size="9" fill="#e53935" text-anchor="middle">start</text>
-  <text x="80" y="10" font-size="9" fill="#ff9800" text-anchor="middle">control</text>
-  <text x="140" y="95" font-size="9" fill="#1e88e5" text-anchor="middle">end</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="320" height="200"><line x1="20" y1="80" x2="80" y2="15" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/><line x1="80" y1="15" x2="140" y2="80" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/><path d="M20 80Q80 15 140 80" fill="none" stroke="#333" stroke-width="2"/><circle r="4" cx="20" cy="80" fill="#e53935"/><circle r="4" cx="80" cy="15" fill="#ff9800"/><circle r="4" cx="140" cy="80" fill="#1e88e5"/><text x="20" y="95" text-anchor="middle" font-size="9px" fill="#e53935">start</text><text x="80" y="10" text-anchor="middle" font-size="9px" fill="#ff9800">control</text><text x="140" y="95" text-anchor="middle" font-size="9px" fill="#1e88e5">end</text></svg>

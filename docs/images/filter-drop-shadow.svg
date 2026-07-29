@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 80" width="150" height="80">
-  <defs>
-    <filter id="shadow"><feDropShadow dx="3" dy="3" stdDeviation="3" flood-color="black"/></filter>
-  </defs>
-  <rect x="18" y="20" width="40" height="40" rx="6" fill="steelblue"/>
-  <rect x="92" y="20" width="40" height="40" rx="6" fill="steelblue" filter="url(#shadow)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 80" width="300" height="160"><defs><filter id="feDropShadow-191216438"><feDropShadow result="feDropShadow-191216438" in="SourceGraphic" dx="3" dy="3" stdDeviation="3" flood-color="rgba(0%,0%,0%,1)"/></filter></defs><rect x="18" y="20" width="40" height="40" fill="steelblue" rx="6"/><rect x="92" y="20" width="40" height="40" fill="steelblue" rx="6" filter="url(#feDropShadow-191216438)"/></svg>

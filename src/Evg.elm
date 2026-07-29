@@ -19,6 +19,7 @@ module Evg exposing
     , class, style
     , none, map
     , batch, noAttr, when
+    , toString
     )
 
 {-| Draw pictures with shapes, text, and effects, using a friendly, type-safe API.
@@ -135,6 +136,11 @@ For gradient and pattern constructors, see [`Evg.Paint`](Evg-Paint).
 # Attribute Utilities
 
 @docs batch, noAttr, when
+
+
+# Serialization
+
+@docs toString
 
 -}
 
@@ -338,13 +344,13 @@ group attrs children =
         { vdomAttrs, eventBuilders, ownMatrix, defs, a11yChildren, inspectable } =
             Internal.svgAttributes attrs
     in
-    Internal.element Svg.g
+    Internal.element "g"
         (Bitwise.xor gHash_ (Internal.attrHash attrs))
         vdomAttrs
         eventBuilders
         ownMatrix
         inspectable
-        (List.map rawNode a11yChildren ++ children)
+        (a11yChildren ++ children)
         defs
 
 
@@ -382,13 +388,13 @@ line attrs ( x1, y1 ) ( x2, y2 ) =
             , Svg.Attributes.stroke "black"
             ]
     in
-    Internal.element Svg.line
+    Internal.element "line"
         (lineHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixFloat x1 |> Internal.mixFloat y1 |> Internal.mixFloat x2 |> Internal.mixFloat y2)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         ([ ( "x1", String.fromFloat x1 ), ( "y1", String.fromFloat y1 ), ( "x2", String.fromFloat x2 ), ( "y2", String.fromFloat y2 ), ( "stroke", "black" ) ] ++ inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -423,13 +429,13 @@ rect attrs { x, y, width, height } =
             , Svg.Attributes.height (String.fromFloat height)
             ]
     in
-    Internal.element Svg.rect
+    Internal.element "rect"
         (rectHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixFloat x |> Internal.mixFloat y |> Internal.mixFloat width |> Internal.mixFloat height)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         ([ ( "x", String.fromFloat x ), ( "y", String.fromFloat y ), ( "width", String.fromFloat width ), ( "height", String.fromFloat height ) ] ++ inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -461,13 +467,13 @@ circle attrs { r, center } =
             , Svg.Attributes.cy (String.fromFloat cy)
             ]
     in
-    Internal.element Svg.circle
+    Internal.element "circle"
         (circleHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixFloat r |> Internal.mixFloat cx |> Internal.mixFloat cy)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         ([ ( "r", String.fromFloat r ), ( "cx", String.fromFloat cx ), ( "cy", String.fromFloat cy ) ] ++ inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -502,13 +508,13 @@ ellipse attrs { rx, ry, center } =
             , Svg.Attributes.cy (String.fromFloat cy)
             ]
     in
-    Internal.element Svg.ellipse
+    Internal.element "ellipse"
         (ellipseHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixFloat rx |> Internal.mixFloat ry |> Internal.mixFloat cx |> Internal.mixFloat cy)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         ([ ( "rx", String.fromFloat rx ), ( "ry", String.fromFloat ry ), ( "cx", String.fromFloat cx ), ( "cy", String.fromFloat cy ) ] ++ inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -542,13 +548,13 @@ polygon attrs points =
         baseAttrs =
             [ Svg.Attributes.points pointsStr ]
     in
-    Internal.element Svg.polygon
+    Internal.element "polygon"
         (polygonHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixString pointsStr)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         (( "points", pointsStr ) :: inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -589,13 +595,13 @@ polyline attrs points =
             , Svg.Attributes.stroke "black"
             ]
     in
-    Internal.element Svg.polyline
+    Internal.element "polyline"
         (polylineHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixString pointsStr)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         ([ ( "points", pointsStr ), ( "fill", "none" ), ( "stroke", "black" ) ] ++ inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -648,18 +654,26 @@ text attrs pos content =
             , Svg.Attributes.textAnchor anchorStr
             ]
 
-        contentNodes =
+        contentChildren =
             case textPath of
                 Nothing ->
-                    [ VirtualDom.text content ]
+                    [ Internal.textNode content ]
 
                 Just ( href, _ ) ->
-                    [ Svg.textPath [ Svg.Attributes.xlinkHref ("#" ++ href) ] [ VirtualDom.text content ] ]
+                    [ Internal.element "textPath"
+                        (Internal.hashStringToInt href)
+                        [ Svg.Attributes.xlinkHref ("#" ++ href) ]
+                        []
+                        Internal.identityMat
+                        [ ( "xlink:href", "#" ++ href ) ]
+                        [ Internal.textNode content ]
+                        []
+                    ]
     in
     Internal.Evg
-        { render = \accum _ -> Svg.text_ (baseAttrs ++ vdomAttrs ++ List.map (\build -> build accum) eventBuilders) (a11yChildren ++ contentNodes)
+        { content = Internal.Tag "text" (baseAttrs ++ vdomAttrs) eventBuilders
         , ownMatrix = ownMatrix
-        , children = []
+        , children = a11yChildren ++ contentChildren
         , hash = textHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixFloat pos.x |> Internal.mixFloat pos.y |> Internal.mixString content
         , defs = defs
         , attrs = [ ( "x", String.fromFloat pos.x ), ( "y", String.fromFloat pos.y ), ( "text-anchor", anchorStr ) ] ++ inspectable
@@ -697,13 +711,13 @@ image attrs { href, x, y, width, height } =
             , Svg.Attributes.height (String.fromFloat height)
             ]
     in
-    Internal.element Svg.image
+    Internal.element "image"
         (imageHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixString href |> Internal.mixFloat x |> Internal.mixFloat y |> Internal.mixFloat width |> Internal.mixFloat height)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         ([ ( "href", href ), ( "x", String.fromFloat x ), ( "y", String.fromFloat y ), ( "width", String.fromFloat width ), ( "height", String.fromFloat height ) ] ++ inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -754,13 +768,13 @@ path attrs subpaths =
         baseAttrs =
             [ Svg.Attributes.d pathStr ]
     in
-    Internal.element Svg.path
+    Internal.element "path"
         (pathHash_ |> Internal.mixInt (Internal.attrHash attrs) |> Internal.mixString pathStr)
         (baseAttrs ++ vdomAttrs)
         eventBuilders
         ownMatrix
         (( "d", pathStr ) :: inspectable)
-        (List.map rawNode a11yChildren)
+        a11yChildren
         defs
 
 
@@ -777,7 +791,7 @@ nothing to show:
 none : Evg msg
 none =
     Internal.Evg
-        { render = \_ _ -> VirtualDom.text ""
+        { content = Internal.TextContent ""
         , ownMatrix = Internal.identityMat
         , children = []
         , hash = 0
@@ -792,21 +806,7 @@ that uses another.
 -}
 map : (a -> b) -> Evg a -> Evg b
 map fn evg =
-    let
-        (Internal.Evg { hash, defs, attrs }) =
-            evg
-
-        mappedNode =
-            VirtualDom.map fn (Internal.toNode evg)
-    in
-    Internal.Evg
-        { render = \_ _ -> mappedNode
-        , ownMatrix = Internal.identityMat
-        , children = []
-        , hash = hash
-        , defs = List.map (\(Def defId defEvg) -> Def defId (Internal.mapEvg fn defEvg)) defs
-        , attrs = attrs
-        }
+    Internal.mapEvg fn evg
 
 
 {-| Bundles several attributes into one, so you can name a reusable style
@@ -861,6 +861,69 @@ when condition attr =
 
     else
         Internal.Batch []
+
+
+{-| Render the drawing to a string of SVG markup instead of `Html`. Takes
+the same arguments as [`svg`](#svg), so a scene can be shown live or written
+to an `.svg` file with the same code.
+
+    Evg.toString []
+        { width = 100, height = 100 }
+        [ Evg.circle [] { r = 40, center = ( 50, 50 ) } ]
+
+This produces markup like:
+
+    "<svg xmlns=\"...\" viewBox=\"0 0 100 100\" ...>...</svg>"
+
+Useful for generating image files in scripts, snapshot-testing drawings, or
+rendering on a server. A few things behave differently from live rendering:
+
+  - Event handlers are dropped. Markup is a picture, not a program.
+  - `Evg.Performance.lazy` shapes are computed (there is nothing to cache).
+  - Raw nodes smuggled in from outside the library cannot be read back out
+    of the virtual DOM, so they are omitted.
+
+-}
+toString : List (Attribute { viewBox : Supported, events : Supported } msg) -> { width : Float, height : Float } -> List (Evg msg) -> String
+toString attrs dims children =
+    let
+        { inspectable, defs } =
+            Internal.svgAttributes attrs
+
+        allDefs =
+            defs ++ Internal.collectDefs children
+
+        viewBoxStr =
+            "0 0 " ++ String.fromFloat dims.width ++ " " ++ String.fromFloat dims.height
+
+        body =
+            Internal.serializeDefs allDefs
+                ++ String.concat (List.map Internal.serialize children)
+
+        rootAttrs =
+            ( "xmlns", "http://www.w3.org/2000/svg" )
+                -- textPath, use, and image serialize an `xlink:href`, which a
+                -- standalone .svg file can only parse if the xlink namespace
+                -- is declared on the root. Add it only when actually used.
+                :: (if String.contains "xlink:" body then
+                        [ ( "xmlns:xlink", "http://www.w3.org/1999/xlink" ) ]
+
+                    else
+                        []
+                   )
+                ++ [ ( "viewBox", viewBoxStr )
+                   , ( "width", String.fromFloat dims.width )
+                   , ( "height", String.fromFloat dims.height )
+                   ]
+                ++ inspectable
+
+        attrStr =
+            rootAttrs
+                |> Internal.dedupeAttrs
+                |> List.map (\( k, v ) -> " " ++ k ++ "=\"" ++ v ++ "\"")
+                |> String.concat
+    in
+    "<svg" ++ attrStr ++ ">" ++ body ++ "</svg>"
 
 
 
@@ -926,7 +989,7 @@ filterWithCoordinates space f =
         ( "", _ ) ->
             Internal.Batch []
 
-        ( id, primitiveNodes ) ->
+        ( id, _ ) ->
             let
                 spaceHash =
                     Internal.coordinateSpaceHash space
@@ -934,17 +997,18 @@ filterWithCoordinates space f =
                 fullId =
                     id ++ "-" ++ String.fromInt spaceHash
 
-                filterNode =
-                    Svg.filter
-                        (Svg.Attributes.id fullId :: Internal.coordinateSpaceAttrs Svg.Attributes.filterUnits space)
-                        primitiveNodes
+                filterEvg =
+                    Internal.filterToEvgWith fullId
+                        (Internal.coordinateSpaceAttrs Svg.Attributes.filterUnits space)
+                        (Internal.coordinateSpaceData "filterUnits" space)
+                        f
             in
             Internal.DefAttr
                 (Internal.mixString fullId filterHash_)
                 "filter"
                 ("url(#" ++ fullId ++ ")")
                 (Svg.Attributes.filter ("url(#" ++ fullId ++ ")"))
-                (Def fullId (Internal.wrapNode filterNode))
+                (Def fullId filterEvg)
 
 
 
@@ -1092,7 +1156,8 @@ Browsers will typically show this as a tooltip on hover.
 -}
 title : String -> Attribute a msg
 title str =
-    Internal.AccessibilityChild (Internal.mixString str titleHash_) (Svg.title [] [ VirtualDom.text str ])
+    Internal.AccessibilityChild (Internal.mixString str titleHash_)
+        (Internal.element "title" (Internal.mixString str titleHash_) [] [] Internal.identityMat [] [ Internal.textNode str ] [])
 
 
 {-| Adds a longer text description to a shape for assistive technology.
@@ -1106,7 +1171,8 @@ readers, so this is the place to describe what a complex graphic shows.
 -}
 desc : String -> Attribute a msg
 desc str =
-    Internal.AccessibilityChild (Internal.mixString str descHash_) (Svg.desc [] [ VirtualDom.text str ])
+    Internal.AccessibilityChild (Internal.mixString str descHash_)
+        (Internal.element "desc" (Internal.mixString str descHash_) [] [] Internal.identityMat [] [ Internal.textNode str ] [])
 
 
 {-| Assigns a CSS class name for external styling.
@@ -1270,14 +1336,6 @@ fillRuleNonZero =
 
 
 -- Internal helpers
-
-
-rawNode : VirtualDom.Node msg -> Evg msg
-rawNode node =
-    Internal.Evg { render = \_ _ -> node, ownMatrix = Internal.identityMat, children = [], hash = 0, defs = [], attrs = [] }
-
-
-
 -- Precomputed tag hash constants
 
 
@@ -1473,12 +1531,12 @@ renderLinearGradient id ( x1, y1 ) ( x2, y2 ) stops =
             [ Svg.Attributes.id id, Svg.Attributes.x1 (String.fromFloat x1), Svg.Attributes.y1 (String.fromFloat y1), Svg.Attributes.x2 (String.fromFloat x2), Svg.Attributes.y2 (String.fromFloat y2) ]
     in
     Internal.Evg
-        { render = \_ -> Svg.linearGradient baseAttrs
+        { content = Internal.Tag "linearGradient" baseAttrs []
         , ownMatrix = Internal.identityMat
         , children = List.map stopToEvg stops
         , hash = 0
         , defs = []
-        , attrs = [ ( "x1", String.fromFloat x1 ), ( "y1", String.fromFloat y1 ), ( "x2", String.fromFloat x2 ), ( "y2", String.fromFloat y2 ) ]
+        , attrs = [ ( "id", id ), ( "x1", String.fromFloat x1 ), ( "y1", String.fromFloat y1 ), ( "x2", String.fromFloat x2 ), ( "y2", String.fromFloat y2 ) ]
         }
 
 
@@ -1489,12 +1547,12 @@ renderRadialGradient id ( cx, cy ) r stops =
             [ Svg.Attributes.id id, Svg.Attributes.cx (String.fromFloat cx), Svg.Attributes.cy (String.fromFloat cy), Svg.Attributes.r (String.fromFloat r) ]
     in
     Internal.Evg
-        { render = \_ -> Svg.radialGradient baseAttrs
+        { content = Internal.Tag "radialGradient" baseAttrs []
         , ownMatrix = Internal.identityMat
         , children = List.map stopToEvg stops
         , hash = 0
         , defs = []
-        , attrs = [ ( "cx", String.fromFloat cx ), ( "cy", String.fromFloat cy ), ( "r", String.fromFloat r ) ]
+        , attrs = [ ( "id", id ), ( "cx", String.fromFloat cx ), ( "cy", String.fromFloat cy ), ( "r", String.fromFloat r ) ]
         }
 
 
@@ -1505,12 +1563,12 @@ renderLinearGradientCS id space ( x1, y1 ) ( x2, y2 ) stops =
             [ Svg.Attributes.id id, Svg.Attributes.x1 (String.fromFloat x1), Svg.Attributes.y1 (String.fromFloat y1), Svg.Attributes.x2 (String.fromFloat x2), Svg.Attributes.y2 (String.fromFloat y2) ] ++ Internal.coordinateSpaceAttrs Svg.Attributes.gradientUnits space
     in
     Internal.Evg
-        { render = \_ -> Svg.linearGradient baseAttrs
+        { content = Internal.Tag "linearGradient" baseAttrs []
         , ownMatrix = Internal.identityMat
         , children = List.map stopToEvg stops
         , hash = 0
         , defs = []
-        , attrs = [ ( "x1", String.fromFloat x1 ), ( "y1", String.fromFloat y1 ), ( "x2", String.fromFloat x2 ), ( "y2", String.fromFloat y2 ) ]
+        , attrs = [ ( "id", id ), ( "x1", String.fromFloat x1 ), ( "y1", String.fromFloat y1 ), ( "x2", String.fromFloat x2 ), ( "y2", String.fromFloat y2 ) ]
         }
 
 
@@ -1521,12 +1579,12 @@ renderRadialGradientCS id space ( cx, cy ) r stops =
             [ Svg.Attributes.id id, Svg.Attributes.cx (String.fromFloat cx), Svg.Attributes.cy (String.fromFloat cy), Svg.Attributes.r (String.fromFloat r) ] ++ Internal.coordinateSpaceAttrs Svg.Attributes.gradientUnits space
     in
     Internal.Evg
-        { render = \_ -> Svg.radialGradient baseAttrs
+        { content = Internal.Tag "radialGradient" baseAttrs []
         , ownMatrix = Internal.identityMat
         , children = List.map stopToEvg stops
         , hash = 0
         , defs = []
-        , attrs = [ ( "cx", String.fromFloat cx ), ( "cy", String.fromFloat cy ), ( "r", String.fromFloat r ) ]
+        , attrs = [ ( "id", id ), ( "cx", String.fromFloat cx ), ( "cy", String.fromFloat cy ), ( "r", String.fromFloat r ) ]
         }
 
 
@@ -1542,7 +1600,7 @@ stopToEvg s =
                     ( String.fromFloat offset, str, String.fromFloat op )
     in
     Internal.Evg
-        { render = \_ -> Svg.stop [ Svg.Attributes.offset offsetStr, Svg.Attributes.stopColor colorStr, Svg.Attributes.stopOpacity opStr ]
+        { content = Internal.Tag "stop" [ Svg.Attributes.offset offsetStr, Svg.Attributes.stopColor colorStr, Svg.Attributes.stopOpacity opStr ] []
         , ownMatrix = Internal.identityMat
         , children = []
         , hash = 0
@@ -1564,12 +1622,19 @@ renderPattern id attrs size content =
                 ++ patternExtraAttrs attrs
     in
     Internal.Evg
-        { render = \_ children -> Svg.pattern baseAttrs children
+        { content = Internal.Tag "pattern" baseAttrs []
         , ownMatrix = Internal.identityMat
         , children = List.map (Internal.mapEvg never) content
         , hash = 0
         , defs = []
-        , attrs = [ ( "width", String.fromFloat size.width ), ( "height", String.fromFloat size.height ) ]
+        , attrs =
+            [ ( "id", id )
+            , ( "width", String.fromFloat size.width )
+            , ( "height", String.fromFloat size.height )
+            , ( "patternUnits", "userSpaceOnUse" )
+            , ( "patternContentUnits", "userSpaceOnUse" )
+            ]
+                ++ patternExtraData attrs
         }
 
 
@@ -1583,33 +1648,17 @@ renderPatternCS id attrs space content =
                 ++ patternExtraAttrs attrs
     in
     Internal.Evg
-        { render = \_ children -> Svg.pattern baseAttrs children
+        { content = Internal.Tag "pattern" baseAttrs []
         , ownMatrix = Internal.identityMat
         , children = List.map (Internal.mapEvg never) content
         , hash = 0
         , defs = []
-        , attrs = [ ( "width", String.fromFloat (csWidth space) ), ( "height", String.fromFloat (csHeight space) ) ]
+        , attrs =
+            ( "id", id )
+                :: Internal.coordinateSpaceData "patternUnits" space
+                ++ [ ( "patternContentUnits", coordinateSpaceUnitStr space ) ]
+                ++ patternExtraData attrs
         }
-
-
-csWidth : Internal.CoordinateSpace -> Float
-csWidth space =
-    case space of
-        Internal.ObjectBoundingBox { width } ->
-            width
-
-        Internal.UserSpace { width } ->
-            width
-
-
-csHeight : Internal.CoordinateSpace -> Float
-csHeight space =
-    case space of
-        Internal.ObjectBoundingBox { height } ->
-            height
-
-        Internal.UserSpace { height } ->
-            height
 
 
 coordinateSpaceUnitStr : Internal.CoordinateSpace -> String
@@ -1646,6 +1695,47 @@ patternExtraAttrs attrs =
 
                 (Internal.DefAttr _ _ _ a _) :: rest ->
                     go rest (VirtualDom.mapAttribute never a :: accAttrs) accTransforms
+
+                (Internal.AccessibilityChild _ _) :: rest ->
+                    go rest accAttrs accTransforms
+
+                (Internal.Batch batchAttrs) :: rest ->
+                    go (batchAttrs ++ rest) accAttrs accTransforms
+
+                (Internal.TextPathChild _ _ _) :: rest ->
+                    go rest accAttrs accTransforms
+    in
+    go attrs [] []
+
+
+{-| The data equivalent of `patternExtraAttrs`, for the inspectable `attrs`
+field that `toString` reads. Mirrors it exactly so serialization matches the
+rendered pattern.
+-}
+patternExtraData : List (Internal.Attribute {} Never) -> List ( String, String )
+patternExtraData attrs =
+    let
+        go remaining accAttrs accTransforms =
+            case remaining of
+                [] ->
+                    case accTransforms of
+                        [] ->
+                            List.reverse accAttrs
+
+                        _ ->
+                            ( "patternTransform", String.join " " (List.reverse accTransforms) ) :: List.reverse accAttrs
+
+                (Internal.Attr _ key value _) :: rest ->
+                    go rest (( key, value ) :: accAttrs) accTransforms
+
+                (Internal.TransformAttr _ str _) :: rest ->
+                    go rest accAttrs (str :: accTransforms)
+
+                (Internal.EventAttr _ _) :: rest ->
+                    go rest accAttrs accTransforms
+
+                (Internal.DefAttr _ key value _ _) :: rest ->
+                    go rest (( key, value ) :: accAttrs) accTransforms
 
                 (Internal.AccessibilityChild _ _) :: rest ->
                     go rest accAttrs accTransforms

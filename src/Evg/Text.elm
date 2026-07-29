@@ -78,7 +78,6 @@ lets you change that vertical relationship.
 import Evg
 import Evg.Internal as Internal exposing (Attribute(..))
 import Evg.Path
-import Svg
 import Svg.Attributes
 import VirtualDom
 
@@ -87,7 +86,7 @@ import VirtualDom
 `richText` block. Create these with `tspan`.
 -}
 type Span msg
-    = Span (List (VirtualDom.Attribute msg)) String
+    = Span (List (VirtualDom.Attribute msg)) (List ( String, String )) String
 
 
 {-| Creates a styled run of text. Use within `richText` to give different
@@ -104,10 +103,10 @@ within the surrounding text.
 tspan : List (Evg.Attribute { a | text : Evg.Supported } msg) -> String -> Span msg
 tspan attrs content =
     let
-        { vdomAttrs } =
+        { vdomAttrs, inspectable } =
             Internal.svgAttributes attrs
     in
-    Span vdomAttrs content
+    Span vdomAttrs inspectable content
 
 
 {-| Renders several styled runs of text as one continuous line. Each run
@@ -150,25 +149,40 @@ richText attrs pos spans =
             , Svg.Attributes.textAnchor anchorStr
             ]
 
-        spanNodes =
+        spanChildren =
             List.map
-                (\(Span spanAttrs content) ->
-                    Svg.tspan spanAttrs [ VirtualDom.text content ]
+                (\(Span spanAttrs spanData content) ->
+                    Internal.Evg
+                        { content = Internal.Tag "tspan" spanAttrs []
+                        , ownMatrix = Internal.identityMat
+                        , children = [ Internal.textNode content ]
+                        , hash = Internal.hashStringToInt content
+                        , defs = []
+                        , attrs = spanData
+                        }
                 )
                 spans
 
-        contentNodes =
+        contentChildren =
             case textPath of
                 Nothing ->
-                    spanNodes
+                    spanChildren
 
                 Just ( href, _ ) ->
-                    [ Svg.textPath [ Svg.Attributes.xlinkHref ("#" ++ href) ] spanNodes ]
+                    [ Internal.Evg
+                        { content = Internal.Tag "textPath" [ Svg.Attributes.xlinkHref ("#" ++ href) ] []
+                        , ownMatrix = Internal.identityMat
+                        , children = spanChildren
+                        , hash = Internal.hashStringToInt href
+                        , defs = []
+                        , attrs = [ ( "xlink:href", "#" ++ href ) ]
+                        }
+                    ]
     in
     Internal.Evg
-        { render = \accum _ -> Svg.text_ (baseAttrs ++ vdomAttrs ++ List.map (\build -> build accum) eventBuilders) (a11yChildren ++ contentNodes)
+        { content = Internal.Tag "text" (baseAttrs ++ vdomAttrs) eventBuilders
         , ownMatrix = ownMatrix
-        , children = []
+        , children = a11yChildren ++ contentChildren
         , hash = Internal.attrHash attrs |> Internal.mixFloat pos.x |> Internal.mixFloat pos.y
         , defs = defs
         , attrs = [ ( "x", String.fromFloat pos.x ), ( "y", String.fromFloat pos.y ), ( "text-anchor", anchorStr ) ] ++ inspectable
@@ -213,7 +227,17 @@ onPath paths =
     in
     TextPathChild hash
         pathId
-        (Internal.Def pathId (Internal.wrapNode (Svg.path [ Svg.Attributes.id pathId, Svg.Attributes.d pathStr ] [])))
+        (Internal.Def pathId
+            (Internal.Evg
+                { content = Internal.Tag "path" [ Svg.Attributes.id pathId, Svg.Attributes.d pathStr ] []
+                , ownMatrix = Internal.identityMat
+                , children = []
+                , hash = hash
+                , defs = []
+                , attrs = [ ( "id", pathId ), ( "d", pathStr ) ]
+                }
+            )
+        )
 
 
 {-| Forces text to occupy exactly the given width, stretching or squeezing

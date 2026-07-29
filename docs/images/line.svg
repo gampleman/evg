@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40">
-  <line x1="10" y1="20" x2="110" y2="20" stroke="black" stroke-width="2"/>
-  <circle cx="10" cy="20" r="3" fill="#666"/>
-  <circle cx="110" cy="20" r="3" fill="#666"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="240" height="80"><line x1="10" y1="20" x2="110" y2="20" stroke="black" stroke-width="2"/><circle r="3" cx="10" cy="20" fill="#666"/><circle r="3" cx="110" cy="20" fill="#666"/></svg>

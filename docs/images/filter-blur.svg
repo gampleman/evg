@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 80" width="150" height="80">
-  <defs>
-    <filter id="blur"><feGaussianBlur stdDeviation="3"/></filter>
-  </defs>
-  <circle cx="38" cy="40" r="22" fill="crimson"/>
-  <circle cx="112" cy="40" r="22" fill="crimson" filter="url(#blur)"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 80" width="300" height="160"><defs><filter id="feGaussianBlur-1964662368"><feGaussianBlur result="feGaussianBlur-1964662368" in="SourceGraphic" stdDeviation="3"/></filter></defs><circle r="22" cx="38" cy="40" fill="crimson"/><circle r="22" cx="112" cy="40" fill="crimson" filter="url(#feGaussianBlur-1964662368)"/></svg>

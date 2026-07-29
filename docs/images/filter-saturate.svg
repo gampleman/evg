@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 80" width="150" height="80">
-  <defs>
-    <filter id="desat"><feColorMatrix type="saturate" values="0"/></filter>
-  </defs>
-  <g>
-    <circle cx="28" cy="40" r="14" fill="tomato"/>
-    <circle cx="48" cy="40" r="14" fill="gold" fill-opacity="0.85"/>
-  </g>
-  <g filter="url(#desat)">
-    <circle cx="102" cy="40" r="14" fill="tomato"/>
-    <circle cx="122" cy="40" r="14" fill="gold" fill-opacity="0.85"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 80" width="300" height="160"><defs><filter id="feColorMatrix-1209209404"><feColorMatrix result="feColorMatrix-1209209404" in="SourceGraphic" type="saturate" values="0"/></filter></defs><g><circle r="14" cx="28" cy="40" fill="tomato"/><circle r="14" cx="48" cy="40" fill="gold" fill-opacity="0.85"/></g><g filter="url(#feColorMatrix-1209209404)"><circle r="14" cx="102" cy="40" fill="tomato"/><circle r="14" cx="122" cy="40" fill="gold" fill-opacity="0.85"/></g></svg>

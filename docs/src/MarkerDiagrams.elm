@@ -1,7 +1,15 @@
 module MarkerDiagrams exposing (svgs)
 
 {-| Generates documentation images for the Evg.Marker module.
+
+These are produced with `Evg.toString` itself, so the pictures in the docs
+are guaranteed to show what the library actually renders.
+
 -}
+
+import Evg
+import Evg.Advanced as Advanced
+import Evg.Marker as Marker
 
 
 type alias DocSvg =
@@ -15,25 +23,51 @@ svgs =
     ]
 
 
+{-| Render at double display size: the width/height attributes are twice the
+viewBox, keeping the drawing coordinates unchanged.
+-}
+docImage : { width : Float, height : Float } -> List (Evg.Evg Never) -> String
+docImage dims children =
+    Evg.toString
+        [ Advanced.viewBox 0 0 dims.width dims.height ]
+        { width = dims.width * 2, height = dims.height * 2 }
+        children
+
+
+arrow : Marker.Marker Never
+arrow =
+    Marker.marker []
+        { width = 10, height = 10, refX = 10, refY = 5 }
+        Marker.AutoOrientation
+        (Evg.polygon [ Evg.fillStr "black" ]
+            [ ( 0, 0 ), ( 10, 5 ), ( 0, 10 ) ]
+        )
+
+
+dot : Marker.Marker Never
+dot =
+    Marker.markerUserSpace []
+        { width = 8, height = 8, refX = 4, refY = 4 }
+        Marker.AutoOrientation
+        (Evg.circle [ Evg.fillStr "crimson" ]
+            { r = 4, center = ( 4, 4 ) }
+        )
+
+
 arrowSvg : String
 arrowSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" width="160" height="40">
-  <defs>
-    <marker id="mk-arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
-      <polygon points="0,0 10,5 0,10" fill="black"/>
-    </marker>
-  </defs>
-  <line x1="15" y1="20" x2="145" y2="20" stroke="black" stroke-width="2" marker-end="url(#mk-arrow)"/>
-</svg>"""
+    docImage { width = 160, height = 40 }
+        [ Evg.line
+            [ Evg.strokeStr "black", Evg.strokeWidth 2, Marker.markerEnd arrow ]
+            ( 15, 20 )
+            ( 145, 20 )
+        ]
 
 
 midSvg : String
 midSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" width="120" height="100">
-  <defs>
-    <marker id="mk-dot" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="userSpaceOnUse">
-      <circle cx="4" cy="4" r="4" fill="crimson"/>
-    </marker>
-  </defs>
-  <polyline points="15,15 60,85 105,15" fill="none" stroke="black" stroke-width="2" marker-mid="url(#mk-dot)"/>
-</svg>"""
+    docImage { width = 120, height = 100 }
+        [ Evg.polyline
+            [ Evg.strokeStr "black", Evg.strokeWidth 2, Marker.markerMid dot ]
+            [ ( 15, 15 ), ( 60, 85 ), ( 105, 15 ) ]
+        ]

@@ -1,5 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 70" width="140" height="70">
-  <rect x="10" y="10" width="30" height="30" fill="#bbb"/>
-  <rect x="10" y="10" width="30" height="30" fill="royalblue" transform="translate(80 20)"/>
-  <line x1="43" y1="28" x2="85" y2="38" stroke="#888" stroke-width="1.5" stroke-dasharray="3 2"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 70" width="280" height="140"><rect x="10" y="10" width="30" height="30" fill="#bbb"/><rect x="10" y="10" width="30" height="30" fill="royalblue" transform="translate(80 20)"/><line x1="43" y1="28" x2="85" y2="38" stroke="#888" stroke-width="1.5" stroke-dasharray="3 2"/></svg>

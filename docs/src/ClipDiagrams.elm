@@ -1,7 +1,16 @@
 module ClipDiagrams exposing (svgs)
 
 {-| Generates documentation images for the Evg.Clip module.
+
+These are produced with `Evg.toString` itself, so the pictures in the docs
+are guaranteed to show what the library actually renders.
+
 -}
+
+import Evg
+import Evg.Advanced as Advanced
+import Evg.Clip as Clip
+import Evg.Paint as Paint
 
 
 type alias DocSvg =
@@ -14,18 +23,33 @@ svgs =
     ]
 
 
+{-| Render at double display size: the width/height attributes are twice the
+viewBox, keeping the drawing coordinates unchanged.
+-}
+docImage : { width : Float, height : Float } -> List (Evg.Evg Never) -> String
+docImage dims children =
+    Evg.toString
+        [ Advanced.viewBox 0 0 dims.width dims.height ]
+        { width = dims.width * 2, height = dims.height * 2 }
+        children
+
+
+photo : Paint.Paint
+photo =
+    Paint.linearGradient ( 0, 0 )
+        ( 1, 1 )
+        [ Paint.stopStr 0 "#ff8c00"
+        , Paint.stopStr 0.5 "#e0407b"
+        , Paint.stopStr 1 "#4b0082"
+        ]
+
+
 clipSvg : String
 clipSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
-  <defs>
-    <linearGradient id="clip-photo" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff8c00"/>
-      <stop offset="0.5" stop-color="#e0407b"/>
-      <stop offset="1" stop-color="#4b0082"/>
-    </linearGradient>
-    <clipPath id="clip-circle">
-      <circle cx="60" cy="60" r="50"/>
-    </clipPath>
-  </defs>
-  <rect x="10" y="10" width="100" height="100" fill="url(#clip-photo)" clip-path="url(#clip-circle)"/>
-</svg>"""
+    docImage { width = 120, height = 120 }
+        [ Evg.rect
+            [ Evg.fill photo
+            , Clip.clip (Evg.circle [] { r = 50, center = ( 60, 60 ) })
+            ]
+            { x = 10, y = 10, width = 100, height = 100 }
+        ]

@@ -59,7 +59,6 @@ gradient or a photograph.
 import Bitwise
 import Evg
 import Evg.Internal as Internal exposing (Attribute(..), Def(..))
-import Svg
 import Svg.Attributes
 import VirtualDom
 
@@ -99,12 +98,12 @@ alpha evg =
         (Svg.Attributes.mask ("url(#" ++ id ++ ")"))
         (Def id
             (Internal.Evg
-                { render = \_ -> Svg.mask [ Svg.Attributes.id id, VirtualDom.attribute "mask-type" "alpha" ]
+                { content = Internal.Tag "mask" [ Svg.Attributes.id id, VirtualDom.attribute "mask-type" "alpha" ] []
                 , ownMatrix = Internal.identityMat
                 , children = [ evg ]
                 , hash = 0
                 , defs = []
-                , attrs = []
+                , attrs = [ ( "id", id ), ( "mask-type", "alpha" ) ]
                 }
             )
         )
@@ -146,18 +145,18 @@ alphaWithCoordinates space evg =
         (Svg.Attributes.mask ("url(#" ++ id ++ ")"))
         (Def id
             (Internal.Evg
-                { render =
-                    \_ ->
-                        Svg.mask
-                            (Svg.Attributes.id id
-                                :: VirtualDom.attribute "mask-type" "alpha"
-                                :: Internal.coordinateSpaceAttrs Svg.Attributes.maskContentUnits space
-                            )
+                { content =
+                    Internal.Tag "mask"
+                        (Svg.Attributes.id id
+                            :: VirtualDom.attribute "mask-type" "alpha"
+                            :: Internal.coordinateSpaceAttrs Svg.Attributes.maskContentUnits space
+                        )
+                        []
                 , ownMatrix = Internal.identityMat
                 , children = [ evg ]
                 , hash = 0
                 , defs = []
-                , attrs = []
+                , attrs = ( "id", id ) :: ( "mask-type", "alpha" ) :: Internal.coordinateSpaceData "maskContentUnits" space
                 }
             )
         )
@@ -192,12 +191,12 @@ luminance evg =
         (Svg.Attributes.mask ("url(#" ++ id ++ ")"))
         (Def id
             (Internal.Evg
-                { render = \_ -> Svg.mask [ Svg.Attributes.id id ]
+                { content = Internal.Tag "mask" [ Svg.Attributes.id id ] []
                 , ownMatrix = Internal.identityMat
                 , children = [ evg ]
                 , hash = 0
                 , defs = []
-                , attrs = []
+                , attrs = [ ( "id", id ) ]
                 }
             )
         )
@@ -238,12 +237,12 @@ luminanceWithCoordinates space evg =
         (Svg.Attributes.mask ("url(#" ++ id ++ ")"))
         (Def id
             (Internal.Evg
-                { render = \_ -> Svg.mask (Svg.Attributes.id id :: Internal.coordinateSpaceAttrs Svg.Attributes.maskContentUnits space)
+                { content = Internal.Tag "mask" (Svg.Attributes.id id :: Internal.coordinateSpaceAttrs Svg.Attributes.maskContentUnits space) []
                 , ownMatrix = Internal.identityMat
                 , children = [ evg ]
                 , hash = 0
                 , defs = []
-                , attrs = []
+                , attrs = ( "id", id ) :: Internal.coordinateSpaceData "maskContentUnits" space
                 }
             )
         )

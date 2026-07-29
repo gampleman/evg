@@ -1,15 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
-  <!-- large arc -->
-  <path d="M 40 60 A 40 40 0 1 1 120 60" fill="none" stroke="#333" stroke-width="2"/>
-  <!-- small arc (same endpoints) -->
-  <path d="M 40 60 A 40 40 0 0 1 120 60" fill="none" stroke="#1e88e5" stroke-width="2" stroke-dasharray="4 3"/>
-  <!-- endpoints -->
-  <circle cx="40" cy="60" r="4" fill="#e53935"/>
-  <circle cx="120" cy="60" r="4" fill="#1e88e5"/>
-  <!-- radius annotation -->
-  <line x1="80" y1="20" x2="120" y2="20" stroke="#888" stroke-width="1"/>
-  <text x="100" y="16" font-size="9" fill="#888" text-anchor="middle">rx</text>
-  <!-- labels -->
-  <text x="80" y="110" font-size="9" fill="#333" text-anchor="middle">large-arc=1 (solid)</text>
-  <text x="80" y="52" font-size="9" fill="#1e88e5" text-anchor="middle">large-arc=0 (dashed)</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" width="400" height="280"><path d="M75 85A40 40 0 1 1 125 85" fill="none" stroke="#333" stroke-width="2"/><path d="M75 85A40 40 0 0 1 125 85" fill="none" stroke="#1e88e5" stroke-width="2" stroke-dasharray="4 3"/><circle r="4" cx="75" cy="85" fill="#e53935"/><circle r="4" cx="125" cy="85" fill="#1e88e5"/><text x="100" y="14" text-anchor="middle" font-size="9px" fill="#333">large-arc=1 (solid)</text><text x="100" y="120" text-anchor="middle" font-size="9px" fill="#1e88e5">large-arc=0 (dashed)</text><text x="62" y="88" text-anchor="end" font-size="9px" fill="#e53935">start</text><text x="138" y="88" text-anchor="start" font-size="9px" fill="#1e88e5">end</text></svg>

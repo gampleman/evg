@@ -1,7 +1,16 @@
 module PaintDiagrams exposing (svgs)
 
 {-| Generates documentation images for the Evg.Paint module.
+
+These are produced with `Evg.toString` itself, so the pictures in the docs
+are guaranteed to show what the library actually renders.
+
 -}
+
+import Color
+import Evg
+import Evg.Advanced as Advanced
+import Evg.Paint as Paint
 
 
 type alias DocSvg =
@@ -17,53 +26,80 @@ svgs =
     ]
 
 
+{-| Render at double display size: the width/height attributes are twice the
+viewBox, keeping the drawing coordinates unchanged.
+-}
+docImage : { width : Float, height : Float } -> List (Evg.Evg Never) -> String
+docImage dims children =
+    Evg.toString
+        [ Advanced.viewBox 0 0 dims.width dims.height ]
+        { width = dims.width * 2, height = dims.height * 2 }
+        children
+
+
 linearGradientSvg : String
 linearGradientSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
-  <defs>
-    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="rgb(255,255,0)"/>
-      <stop offset="1" stop-color="rgb(255,0,0)"/>
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="120" height="60" fill="url(#lg)"/>
-</svg>"""
+    docImage { width = 120, height = 60 }
+        [ Evg.rect
+            [ Evg.fill
+                (Paint.linearGradient ( 0, 0 )
+                    ( 1, 0 )
+                    [ Paint.stop 0 (Color.rgb255 255 255 0)
+                    , Paint.stop 1 (Color.rgb255 255 0 0)
+                    ]
+                )
+            ]
+            { x = 0, y = 0, width = 120, height = 60 }
+        ]
 
 
 linearGradientDiagonalSvg : String
 linearGradientDiagonalSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
-  <defs>
-    <linearGradient id="lgd" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="rgb(0,0,255)"/>
-      <stop offset="1" stop-color="rgb(255,0,255)"/>
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="120" height="60" fill="url(#lgd)"/>
-</svg>"""
+    docImage { width = 120, height = 60 }
+        [ Evg.rect
+            [ Evg.fill
+                (Paint.linearGradient ( 0, 0 )
+                    ( 1, 1 )
+                    [ Paint.stop 0 (Color.rgb255 0 0 255)
+                    , Paint.stop 1 (Color.rgb255 255 0 255)
+                    ]
+                )
+            ]
+            { x = 0, y = 0, width = 120, height = 60 }
+        ]
 
 
 radialGradientSvg : String
 radialGradientSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-  <defs>
-    <radialGradient id="rg" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="rgb(255,255,255)"/>
-      <stop offset="1" stop-color="rgb(0,0,0)"/>
-    </radialGradient>
-  </defs>
-  <rect x="0" y="0" width="100" height="100" fill="url(#rg)"/>
-</svg>"""
+    docImage { width = 100, height = 100 }
+        [ Evg.rect
+            [ Evg.fill
+                (Paint.radialGradient ( 0.5, 0.5 )
+                    0.5
+                    [ Paint.stop 0 (Color.rgb255 255 255 255)
+                    , Paint.stop 1 (Color.rgb255 0 0 0)
+                    ]
+                )
+            ]
+            { x = 0, y = 0, width = 100, height = 100 }
+        ]
 
 
 patternDotsSvg : String
 patternDotsSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
-  <defs>
-    <pattern id="dots" width="10" height="10" patternUnits="userSpaceOnUse" viewBox="0 0 10 10">
-      <rect x="0" y="0" width="10" height="10" fill="white"/>
-      <circle cx="5" cy="5" r="3" fill="red"/>
-    </pattern>
-  </defs>
-  <rect x="0" y="0" width="120" height="60" fill="url(#dots)" stroke="#999" stroke-width="1"/>
-</svg>"""
+    docImage { width = 120, height = 60 }
+        [ Evg.rect
+            [ Evg.fill
+                (Paint.pattern [ Advanced.viewBox 0 0 10 10 ]
+                    { width = 10, height = 10 }
+                    [ Evg.rect [ Evg.fillStr "white" ]
+                        { x = 0, y = 0, width = 10, height = 10 }
+                    , Evg.circle [ Evg.fillStr "red" ]
+                        { r = 3, center = ( 5, 5 ) }
+                    ]
+                )
+            , Evg.strokeStr "#999"
+            , Evg.strokeWidth 1
+            ]
+            { x = 0, y = 0, width = 120, height = 60 }
+        ]

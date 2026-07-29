@@ -1,6 +1,7 @@
 module Evg.Internal exposing
     ( Attribute(..)
     , BaseFilter
+    , Content(..)
     , CoordinateSpace(..)
     , Def(..)
     , Evg(..)
@@ -16,11 +17,14 @@ module Evg.Internal exposing
     , composeMat
     , contentHash
     , coordinateSpaceAttrs
+    , coordinateSpaceData
     , coordinateSpaceHash
+    , dedupeAttrs
     , element
     , filterElem
     , filterPrimitives
     , filterToEvg
+    , filterToEvgWith
     , hashStringToInt
     , identityMat
     , invertMat
@@ -30,7 +34,10 @@ module Evg.Internal exposing
     , mixInt
     , mixString
     , renderDefs
+    , serialize
+    , serializeDefs
     , svgAttributes
+    , textNode
     , toNode
     , wrapNode
     )
@@ -168,6 +175,28 @@ coordinateSpaceAttrs unitsAttr space =
             ]
 
 
+{-| The data equivalent of `coordinateSpaceAttrs`: the same attribute pairs
+as strings, for the inspectable `attrs` field.
+-}
+coordinateSpaceData : String -> CoordinateSpace -> List ( String, String )
+coordinateSpaceData unitsAttrName space =
+    let
+        pairs unitsValue { x, y, width, height } =
+            [ ( unitsAttrName, unitsValue )
+            , ( "x", String.fromFloat x )
+            , ( "y", String.fromFloat y )
+            , ( "width", String.fromFloat width )
+            , ( "height", String.fromFloat height )
+            ]
+    in
+    case space of
+        ObjectBoundingBox rect ->
+            pairs "objectBoundingBox" rect
+
+        UserSpace rect ->
+            pairs "userSpaceOnUse" rect
+
+
 type Paint
     = PaintNone
     | PaintSolid Color
@@ -189,13 +218,33 @@ type Stop
 
 type Evg msg
     = Evg
-        { render : Mat23 -> List (VirtualDom.Node msg) -> VirtualDom.Node msg
+        { content : Content msg
         , ownMatrix : Mat23
         , children : List (Evg msg)
         , hash : Int
         , defs : List (Def msg)
         , attrs : List ( String, String )
         }
+
+
+{-| What a node actually is. Keeping this as data (rather than a baked
+render closure) is what makes `Evg.toString` possible: the tree can be
+walked and serialized, not only handed to the virtual DOM.
+
+  - `Tag`: an ordinary element. Prebaked VirtualDom attributes render fast;
+    the equivalent data lives in the record's `attrs` field. Event handlers
+    are builders awaiting the accumulated transform matrix.
+  - `TextContent`: character data inside an element (not a `<text>` tag).
+  - `Raw`: an opaque VirtualDom node. Renders fine; `toString` skips it.
+  - `RawLazy`: a lazily-rendered subtree. The node preserves
+    `VirtualDom.lazy` caching; the thunk lets `toString` force the content.
+
+-}
+type Content msg
+    = Tag String (List (VirtualDom.Attribute msg)) (List (Mat23 -> VirtualDom.Attribute msg))
+    | TextContent String
+    | Raw (VirtualDom.Node msg)
+    | RawLazy (VirtualDom.Node msg) (() -> Evg msg)
 
 
 toNode : Evg msg -> VirtualDom.Node msg
@@ -205,27 +254,196 @@ toNode =
 
 {-| Render a node given the accumulated root→parent transform matrix. Each
 element composes its own transform onto that accumulator and hands the result
-both to its own renderer (so event handlers can invert it to recover local
-coordinates) and to its children.
+both to its own event handlers (which invert it to recover local coordinates)
+and to its children.
 -}
 toNodeWith : Mat23 -> Evg msg -> VirtualDom.Node msg
-toNodeWith parentAccum (Evg { render, ownMatrix, children }) =
+toNodeWith parentAccum (Evg { content, ownMatrix, children }) =
     -- IGNORE TCO: tree recursion over children cannot be tail-call optimized
-    let
-        accum =
-            composeMat parentAccum ownMatrix
-    in
-    render accum (List.map (toNodeWith accum) children)
+    case content of
+        Tag tag vdomAttrs eventBuilders ->
+            let
+                accum =
+                    composeMat parentAccum ownMatrix
+
+                finalAttrs =
+                    case eventBuilders of
+                        [] ->
+                            vdomAttrs
+
+                        _ ->
+                            vdomAttrs ++ List.map (\build -> build accum) eventBuilders
+
+                -- A nested <svg> resets the event coordinate origin: the
+                -- browser reports offsets relative to the nearest ancestor
+                -- <svg>, so its children start from a fresh matrix.
+                childAccum =
+                    if tag == "svg" then
+                        identityMat
+
+                    else
+                        accum
+            in
+            svgNode tag finalAttrs (List.map (toNodeWith childAccum) children)
+
+        TextContent str ->
+            VirtualDom.text str
+
+        Raw node ->
+            node
+
+        RawLazy node _ ->
+            node
+
+
+{-| Dispatch to elm/svg's trusted constructors for the tags we emit, so the
+hot path keeps skipping VirtualDom's tag sanitization exactly as before.
+Unknown tags (from `customElement`) fall back to the checked constructor.
+-}
+svgNode : String -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> VirtualDom.Node msg
+svgNode tag =
+    case tag of
+        "g" ->
+            Svg.g
+
+        "circle" ->
+            Svg.circle
+
+        "rect" ->
+            Svg.rect
+
+        "line" ->
+            Svg.line
+
+        "ellipse" ->
+            Svg.ellipse
+
+        "polygon" ->
+            Svg.polygon
+
+        "polyline" ->
+            Svg.polyline
+
+        "path" ->
+            Svg.path
+
+        "text" ->
+            Svg.text_
+
+        "tspan" ->
+            Svg.tspan
+
+        "textPath" ->
+            Svg.textPath
+
+        "image" ->
+            Svg.image
+
+        "use" ->
+            Svg.use
+
+        "defs" ->
+            Svg.defs
+
+        "symbol" ->
+            Svg.symbol
+
+        "marker" ->
+            Svg.marker
+
+        "mask" ->
+            Svg.mask
+
+        "clipPath" ->
+            Svg.clipPath
+
+        "linearGradient" ->
+            Svg.linearGradient
+
+        "radialGradient" ->
+            Svg.radialGradient
+
+        "stop" ->
+            Svg.stop
+
+        "pattern" ->
+            Svg.pattern
+
+        "filter" ->
+            Svg.filter
+
+        "animate" ->
+            Svg.animate
+
+        "animateTransform" ->
+            Svg.animateTransform
+
+        "animateMotion" ->
+            Svg.animateMotion
+
+        "mpath" ->
+            Svg.mpath
+
+        "title" ->
+            Svg.title
+
+        "desc" ->
+            Svg.desc
+
+        "svg" ->
+            Svg.svg
+
+        "a" ->
+            Svg.a
+
+        "set" ->
+            Svg.set
+
+        _ ->
+            Svg.node tag
 
 
 wrapNode : VirtualDom.Node msg -> Evg msg
 wrapNode node =
-    Evg { render = \_ _ -> node, ownMatrix = identityMat, children = [], hash = 0, defs = [], attrs = [] }
+    Evg { content = Raw node, ownMatrix = identityMat, children = [], hash = 0, defs = [], attrs = [] }
+
+
+{-| A bare text node (character data inside an element).
+-}
+textNode : String -> Evg msg
+textNode str =
+    Evg { content = TextContent str, ownMatrix = identityMat, children = [], hash = hashStringToInt str, defs = [], attrs = [] }
 
 
 mapEvg : (a -> b) -> Evg a -> Evg b
-mapEvg fn evg =
-    wrapNode (VirtualDom.map fn (toNode evg))
+mapEvg fn (Evg e) =
+    -- IGNORE TCO: tree recursion over children cannot be tail-call optimized
+    Evg
+        { content = mapContent fn e.content
+        , ownMatrix = e.ownMatrix
+        , children = List.map (mapEvg fn) e.children
+        , hash = e.hash
+        , defs = List.map (\(Def defId defEvg) -> Def defId (mapEvg fn defEvg)) e.defs
+        , attrs = e.attrs
+        }
+
+
+mapContent : (a -> b) -> Content a -> Content b
+mapContent fn content =
+    case content of
+        Tag tag vdomAttrs eventBuilders ->
+            Tag tag
+                (List.map (VirtualDom.mapAttribute fn) vdomAttrs)
+                (List.map (\build accum -> VirtualDom.mapAttribute fn (build accum)) eventBuilders)
+
+        TextContent str ->
+            TextContent str
+
+        Raw node ->
+            Raw (VirtualDom.map fn node)
+
+        RawLazy node thunk ->
+            RawLazy (VirtualDom.map fn node) (\() -> mapEvg fn (thunk ()))
 
 
 type Def msg
@@ -235,7 +453,7 @@ type Def msg
 type Attribute constraints msg
     = Attr Int String String (VirtualDom.Attribute msg)
     | DefAttr Int String String (VirtualDom.Attribute msg) (Def msg)
-    | AccessibilityChild Int (VirtualDom.Node msg)
+    | AccessibilityChild Int (Evg msg)
     | TransformAttr Int String Mat23
     | EventAttr Int (Mat23 -> VirtualDom.Attribute msg)
     | Batch (List (Attribute constraints msg))
@@ -243,7 +461,7 @@ type Attribute constraints msg
 
 
 element :
-    (List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> VirtualDom.Node msg)
+    String
     -> Int
     -> List (VirtualDom.Attribute msg)
     -> List (Mat23 -> VirtualDom.Attribute msg)
@@ -252,11 +470,9 @@ element :
     -> List (Evg msg)
     -> List (Def msg)
     -> Evg msg
-element renderFn hash vdomAttrs eventBuilders ownMatrix inspectableAttrs children ownDefs =
+element tag hash vdomAttrs eventBuilders ownMatrix inspectableAttrs children ownDefs =
     Evg
-        { render =
-            \accum childNodes ->
-                renderFn (vdomAttrs ++ List.map (\build -> build accum) eventBuilders) childNodes
+        { content = Tag tag vdomAttrs eventBuilders
         , ownMatrix = ownMatrix
         , children = children
 
@@ -276,7 +492,7 @@ svgAttributes :
         , eventBuilders : List (Mat23 -> VirtualDom.Attribute msg)
         , ownMatrix : Mat23
         , defs : List (Def msg)
-        , a11yChildren : List (VirtualDom.Node msg)
+        , a11yChildren : List (Evg msg)
         , inspectable : List ( String, String )
         , textPath : Maybe ( String, Def msg )
         }
@@ -367,13 +583,36 @@ collectDefs children =
     List.concatMap (\(Evg { defs }) -> defs) children
 
 
+{-| The complete def list, including defs nested inside another def's own
+tree. A shape used as a clip stencil or mask can itself be painted with a
+gradient or pattern, and that paint's def lives inside the stencil's subtree
+rather than at the top level, so a shallow collection would leave the
+reference dangling. Walks each def's children transitively.
+-}
+allDefs : List (Def msg) -> List (Def msg)
+allDefs defs =
+    -- IGNORE TCO: tree recursion over def subtrees cannot be tail-call optimized
+    List.concatMap
+        (\((Def _ evg) as def) ->
+            def :: allDefs (evgDefs evg)
+        )
+        defs
+
+
+{-| Every def reachable from a node: its own plus those of all its children.
+-}
+evgDefs : Evg msg -> List (Def msg)
+evgDefs (Evg { defs, children }) =
+    defs ++ collectDefs children
+
+
 renderDefs : List (Def msg) -> VirtualDom.Node msg
 renderDefs defs =
-    case defs of
+    case allDefs defs of
         [] ->
             VirtualDom.text ""
 
-        _ ->
+        expanded ->
             let
                 dedup =
                     List.foldl
@@ -385,9 +624,174 @@ renderDefs defs =
                                 Dict.insert id (toNode evg) acc
                         )
                         Dict.empty
-                        defs
+                        expanded
             in
             Svg.defs [] (Dict.values dedup)
+
+
+{-| Serialize a node (and its children) to SVG markup. Event handlers are
+dropped (markup has no behavior), lazy nodes are forced through their thunk,
+and opaque `Raw` nodes are skipped since VirtualDom values cannot be
+inspected from Elm.
+-}
+serialize : Evg msg -> String
+serialize (Evg { content, children, attrs }) =
+    -- IGNORE TCO: tree recursion over children cannot be tail-call optimized
+    case content of
+        Tag tag _ _ ->
+            let
+                attrStr =
+                    attrs
+                        |> dedupeAttrs
+                        |> List.map (\( k, v ) -> " " ++ k ++ "=\"" ++ escapeAttr v ++ "\"")
+                        |> String.concat
+
+                inner =
+                    children
+                        |> List.map serialize
+                        |> String.concat
+            in
+            if String.isEmpty inner then
+                "<" ++ tag ++ attrStr ++ "/>"
+
+            else
+                "<" ++ tag ++ attrStr ++ ">" ++ inner ++ "</" ++ tag ++ ">"
+
+        TextContent str ->
+            escapeText str
+
+        Raw _ ->
+            ""
+
+        RawLazy _ thunk ->
+            serializeWithLocalDefs (thunk ())
+
+
+{-| A lazy subtree renders its own defs locally (see Evg.Performance), so its
+serialization must include them the same way or references would dangle.
+-}
+serializeWithLocalDefs : Evg msg -> String
+serializeWithLocalDefs ((Evg { defs }) as evg) =
+    case defs of
+        [] ->
+            serialize evg
+
+        _ ->
+            "<g>" ++ serializeDefs defs ++ serialize evg ++ "</g>"
+
+
+{-| Serialize a def list to a `<defs>` element, deduplicated by id, matching
+`renderDefs`.
+-}
+serializeDefs : List (Def msg) -> String
+serializeDefs defs =
+    case allDefs defs of
+        [] ->
+            ""
+
+        expanded ->
+            let
+                dedup =
+                    List.foldl
+                        (\(Def id evg) acc ->
+                            if Dict.member id acc then
+                                acc
+
+                            else
+                                Dict.insert id (serialize evg) acc
+                        )
+                        Dict.empty
+                        expanded
+            in
+            "<defs>" ++ String.concat (Dict.values dedup) ++ "</defs>"
+
+
+{-| Collapse repeated attribute names the way rendering does: repeated
+`transform` entries join into one space-separated value (transforms
+compose), while for any other repeated name the last value wins. Order of
+first appearance is kept.
+-}
+dedupeAttrs : List ( String, String ) -> List ( String, String )
+dedupeAttrs attrs =
+    let
+        resolved =
+            List.foldl
+                (\( k, v ) acc ->
+                    Dict.update k
+                        (\existing ->
+                            case ( existing, k ) of
+                                ( Just prev, "transform" ) ->
+                                    Just (prev ++ " " ++ v)
+
+                                _ ->
+                                    Just v
+                        )
+                        acc
+                )
+                Dict.empty
+                attrs
+    in
+    attrs
+        |> List.foldl
+            (\( k, _ ) ( seen, acc ) ->
+                if Set.member k seen then
+                    ( seen, acc )
+
+                else
+                    ( Set.insert k seen
+                    , ( k, Maybe.withDefault "" (Dict.get k resolved) ) :: acc
+                    )
+            )
+            ( Set.empty, [] )
+        |> Tuple.second
+        |> List.reverse
+
+
+escapeAttr : String -> String
+escapeAttr =
+    String.foldl
+        (\c acc ->
+            acc
+                ++ (case c of
+                        '&' ->
+                            "&amp;"
+
+                        '<' ->
+                            "&lt;"
+
+                        '>' ->
+                            "&gt;"
+
+                        '"' ->
+                            "&quot;"
+
+                        _ ->
+                            String.fromChar c
+                   )
+        )
+        ""
+
+
+escapeText : String -> String
+escapeText =
+    String.foldl
+        (\c acc ->
+            acc
+                ++ (case c of
+                        '&' ->
+                            "&amp;"
+
+                        '<' ->
+                            "&lt;"
+
+                        '>' ->
+                            "&gt;"
+
+                        _ ->
+                            String.fromChar c
+                   )
+        )
+        ""
 
 
 contentHash : Evg msg -> String
@@ -498,6 +902,15 @@ filterElem filter =
 
 filterToEvg : String -> Filter -> Evg msg
 filterToEvg id filter =
+    filterToEvgWith id [] [] filter
+
+
+{-| Like `filterToEvg`, but with extra attributes on the `<filter>` element
+(paired as prebaked VirtualDom attributes and their data equivalents), used
+for filter region overrides.
+-}
+filterToEvgWith : String -> List (VirtualDom.Attribute msg) -> List ( String, String ) -> Filter -> Evg msg
+filterToEvgWith id extraVdomAttrs extraDataAttrs filter =
     case filter of
         Filter args ->
             let
@@ -517,12 +930,12 @@ filterToEvg id filter =
                     List.map primitiveToEvg allPrimitives
             in
             Evg
-                { render = \_ -> Svg.filter [ Svg.Attributes.id id ]
+                { content = Tag "filter" (Svg.Attributes.id id :: extraVdomAttrs) []
                 , ownMatrix = identityMat
                 , children = primitiveChildren
                 , hash = 0
                 , defs = []
-                , attrs = []
+                , attrs = ( "id", id ) :: extraDataAttrs
                 }
 
         Virtual _ ->
@@ -532,24 +945,31 @@ filterToEvg id filter =
 primitiveToEvg : BaseFilter a -> Evg msg
 primitiveToEvg prim =
     let
-        childNodes =
+        childEvgs =
             List.map
                 (\( childName, attrs ) ->
-                    Svg.node childName (List.map filterAttr attrs) []
+                    Evg
+                        { content = Tag childName (List.map filterAttr attrs) []
+                        , ownMatrix = identityMat
+                        , children = []
+                        , hash = 0
+                        , defs = []
+                        , attrs = attrs
+                        }
                 )
                 prim.children
     in
     Evg
-        { render =
-            \_ animChildren ->
-                Svg.node prim.name
-                    (Svg.Attributes.result prim.id :: List.map filterAttr prim.args)
-                    (childNodes ++ animChildren)
+        { content = Tag prim.name (Svg.Attributes.result prim.id :: List.map filterAttr prim.args) []
         , ownMatrix = identityMat
-        , children = []
+        , children = childEvgs
+
+        -- attrs must mirror the rendered attributes exactly, or toString drifts
+        -- from toNode. That means the result id plus every arg, including the
+        -- in/in2 wiring that chains one primitive's output into the next.
         , hash = 0
         , defs = []
-        , attrs = List.filter (\( k, _ ) -> k /= "in" && k /= "in2") prim.args
+        , attrs = ( "result", prim.id ) :: prim.args
         }
 
 

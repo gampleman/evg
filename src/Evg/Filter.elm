@@ -229,6 +229,8 @@ sourceAlpha =
 paints a colored rectangle over the shape; it becomes useful when combined
 with other filters, for example recoloring a silhouette with `compositeIn`.
 
+![flood example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-flood.svg)
+
     Filter.flood (Color.rgb255 255 0 0)
 
 This produces a solid red rectangle covering the filter area.
@@ -240,6 +242,8 @@ flood color =
 
 
 {-| Like `flood`, but takes the color as a CSS color string.
+
+![flood example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-flood.svg)
 
     Filter.floodStr "#FA32CA"
 
@@ -280,6 +284,8 @@ gaussianBlurXY rx ry =
 {-| Generates soft, organic, cloud-like noise, filling the filter area with
 random smoky color. Use it as a texture (clouds, marble, water) or as the
 guide image for `displacementMap` to make things look warped or hand-drawn.
+
+![noise types comparison](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-noise-types.svg)
 
     Filter.fractalNoise
         { baseFrequency = 0.05
@@ -464,6 +470,8 @@ so for example reds can become greens and greens become blues. Brightness and
 transparency are unaffected. Useful for producing color variations of the same
 artwork.
 
+![hue rotate example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-hue-rotate.svg)
+
     -- Shift all colors by 90 degrees:
     Filter.sourceGraphic
         |> Filter.hueRotate 90
@@ -480,6 +488,8 @@ hueRotate angle inFilter =
 opaque and dark areas become see-through, while all color is discarded. Useful
 for building masks from colored content, where you then use the result to hide
 or reveal parts of another image.
+
+![luminance to alpha example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-luminance-to-alpha.svg)
 
     -- Use brightness as transparency:
     Filter.sourceGraphic
@@ -527,6 +537,8 @@ mergeWithTemplate result input template =
 remapping function, much like the "curves" or "levels" tools in a photo
 editor. This is how you do brightness adjustment, contrast adjustment, color
 balance, or posterization (reducing colors to a few flat bands).
+
+![component transfer functions](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-component-transfer.svg)
 
     -- Increase contrast on all color channels:
     Filter.sourceGraphic
@@ -637,6 +649,8 @@ identity =
 
 {-| For table, the function is defined by linear interpolation between the values given. The table has n+1 values (i.e., v0 to vn) specifying the start and end values for n evenly sized interpolation regions.
 
+![component transfer functions](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-component-transfer.svg)
+
 Let's look at an example:
 
     Filter.table [ 0, 0.6, 0.8, 1 ]
@@ -658,6 +672,8 @@ table =
 
 
 {-| For discrete, the function is defined by the step function defined by the values given, which provides a list of n values (i.e., v0 to vn-1) in order to identify a step function consisting of n steps.
+
+![component transfer functions](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-component-transfer.svg)
 
 Let's look at an example:
 
@@ -687,6 +703,8 @@ discrete =
 
 Where C is the input value and C' is the output value.
 
+![component transfer functions](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-component-transfer.svg)
+
 -}
 linear : { slope : Float, intercept : Float } -> RemappingFunction
 linear { slope, intercept } =
@@ -698,6 +716,8 @@ linear { slope, intercept } =
     C' = amplitude * C  ^ exponent + offset
 
 Where C is the input value and C' is the output value.
+
+![component transfer functions](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-component-transfer.svg)
 
 -}
 gamma : { amplitude : Float, exponent : Float, offset : Float } -> RemappingFunction
@@ -724,6 +744,8 @@ Each filter operation normally covers the entire filter area. `withinSubregion`
 confines the previous operation's input and output to a smaller rectangle.
 This is useful for limiting expensive effects to where they are needed, or
 creatively, for confining a blur or a color fill to just part of the image.
+
+![subregion example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-subregion.svg)
 
 The coordinates are fractions of the filter area (which defaults to the
 element's bounding box plus some padding). So `{ x = 0, y = 0, width = 1, height = 1 }`
@@ -889,6 +911,8 @@ marble or rippling water rather than soft clouds. Use it as a texture or as
 the guide image for `displacementMap`. The options mean the same as in
 `fractalNoise`.
 
+![noise types comparison](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-noise-types.svg)
+
     Filter.turbulence
         { baseFrequency = 0.05
         , numOctaves = 2
@@ -916,6 +940,8 @@ turbulence { baseFrequency, numOctaves, seed, stitchTiles } =
 using the second image as a cookie cutter on the first. A common use is
 recoloring a silhouette: cut a `flood` color down to the shape's outline.
 
+![composite operators](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-composite.svg)
+
     Filter.compositeIn foreground mask
 
 Only the parts of `foreground` that sit over `mask` remain visible.
@@ -929,6 +955,9 @@ compositeIn =
 {-| Keeps only the parts of the first input that do not overlap the second,
 punching a hole in the first image wherever the second one is. Useful for
 cut-out and outline effects.
+
+![composite operators](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-composite.svg)
+
 -}
 compositeOut : Filter -> Filter -> Filter
 compositeOut =
@@ -938,6 +967,9 @@ compositeOut =
 {-| Draws the first input on top of the second, but only where the second is
 visible; anything hanging over the edge of the second image is trimmed away.
 Useful for painting decoration onto a shape without spilling outside it.
+
+![composite operators](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-composite.svg)
+
 -}
 compositeAtop : Filter -> Filter -> Filter
 compositeAtop =
@@ -947,6 +979,9 @@ compositeAtop =
 {-| Stacks the first input over the second, like laying one photo on top of
 another; the second shows through wherever the first is transparent. For
 stacking more than two layers, `merge` is more convenient.
+
+![composite operators](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-composite.svg)
+
 -}
 compositeOver : Filter -> Filter -> Filter
 compositeOver =
@@ -955,6 +990,9 @@ compositeOver =
 
 {-| Keeps only the parts of each input that do not overlap the other; the
 overlap itself disappears. Where two shapes cross, this leaves a hole.
+
+![composite operators](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-composite.svg)
+
 -}
 compositeXor : Filter -> Filter -> Filter
 compositeXor =
@@ -966,6 +1004,8 @@ compositeXor =
 This gives precise numeric control when none of the ready-made composite
 operations do what you need, such as adding a lighting result onto a base
 image.
+
+![composite operators](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-composite.svg)
 
     -- Add lighting to a base image:
     Filter.compositeArithmetic 0 1 1 0 base lighting
@@ -987,6 +1027,8 @@ compositeArithmetic k1 k2 k3 k4 =
 {-| How the colors of two overlapping images mix, matching the blend modes
 found in photo editors:
 
+![blend modes](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-blend.svg)
+
   - `Normal`: the top image simply covers the bottom one
   - `Multiply`: colors combine to get darker, like overlapping stained glass
   - `Screen`: colors combine to get lighter, like two projections on a screen
@@ -1007,6 +1049,8 @@ type BlendMode
 {-| Mixes the colors of two inputs where they overlap, using one of the
 `BlendMode`s. Unlike the composite operations, which decide which image wins
 in the overlap, blending mixes the colors of both.
+
+![blend modes](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-blend.svg)
 
     Filter.blend Filter.Multiply foreground background
 
@@ -1071,6 +1115,8 @@ merge inputs =
 {-| Slides the input image by the given horizontal and vertical distance,
 leaving it otherwise unchanged. This is the usual way to push a shadow copy
 out from under the original shape.
+
+![offset example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-offset.svg)
 
     Filter.sourceAlpha
         |> Filter.gaussianBlur 3
@@ -1171,6 +1217,9 @@ dilateXY rx ry =
 {-| Fills the whole filter area by repeating the input image side by side,
 like bathroom tiles. Usually combined with `withinSubregion` to pick out the
 small patch that gets repeated.
+
+![tile example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-tile.svg)
+
 -}
 tile : Filter -> Filter
 tile =
@@ -1191,6 +1240,8 @@ type ConvolveOption
 the grid of weights (the kernel) you supply. Depending on the kernel this can
 sharpen, emboss, detect edges, or blur; use it when you need a pixel-level
 effect that none of the other filters provide.
+
+![convolve example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-convolve.svg)
 
 The kernel dimensions are derived automatically from the list of lists.
 
@@ -1355,6 +1406,8 @@ type Light
 directions like a bare light bulb hovering over the image. Areas near the
 light appear brighter than areas far away.
 
+![lighting example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-lighting.svg)
+
     Filter.pointLight { x = 50, y = 50, z = 200 }
 
 -}
@@ -1390,6 +1443,8 @@ reflecting a light. The input's transparency is treated as a height map, so
 the shape appears embossed with bright glints where the light catches it. Use
 it for glass, metal or plastic button effects, usually added onto the original
 shape with `compositeArithmetic` or `compositeIn`.
+
+![lighting example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-lighting.svg)
 
 `surfaceScale` sets how tall the imaginary bumps are, `specularConstant` the
 overall brightness of the reflection, and `specularExponent` how tightly
@@ -1451,6 +1506,8 @@ specularLighting config light inFilter =
 by a lamp, with no shiny glints. Like `specularLighting`, it treats the
 input's transparency as a height map; the result is an evenly lit embossed
 look, good for paper, stone or fabric effects.
+
+![lighting example](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/filter-lighting.svg)
 
 `surfaceScale` sets how tall the imaginary bumps are and `diffuseConstant` the
 overall brightness.

@@ -2,7 +2,15 @@ module PathDiagrams exposing (svgs)
 
 {-| Generates documentation diagrams for path commands.
 Each diagram shows the command's effect with labeled control points.
+
+These are produced with `Evg.toString` itself, so the pictures in the docs
+are guaranteed to show what the library actually renders.
+
 -}
+
+import Evg
+import Evg.Advanced as Advanced
+import Evg.Path exposing (Path(..), PathSegment(..))
 
 
 type alias DocSvg =
@@ -21,133 +29,143 @@ svgs =
     ]
 
 
+{-| Render at double display size: the width/height attributes are twice the
+viewBox, keeping the drawing coordinates unchanged.
+-}
+docImage : { width : Float, height : Float } -> List (Evg.Evg Never) -> String
+docImage dims children =
+    Evg.toString
+        [ Advanced.viewBox 0 0 dims.width dims.height ]
+        { width = dims.width * 2, height = dims.height * 2 }
+        children
+
+
+{-| A dashed guide line connecting a curve endpoint to its control point.
+-}
+guide : List Float -> ( Float, Float ) -> ( Float, Float ) -> Evg.Evg Never
+guide dashes from to =
+    Evg.line
+        [ Evg.strokeStr "#ccc", Evg.strokeWidth 1, Evg.dashPattern dashes ]
+        from
+        to
+
+
 lineTo : String
 lineTo =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 80" width="160" height="80">
-  <path d="M 20 60 L 140 20" fill="none" stroke="#333" stroke-width="2"/>
-  <circle cx="20" cy="60" r="4" fill="#e53935"/>
-  <circle cx="140" cy="20" r="4" fill="#1e88e5"/>
-  <text x="20" y="75" font-size="10" fill="#e53935" text-anchor="middle">start</text>
-  <text x="140" y="15" font-size="10" fill="#1e88e5" text-anchor="middle">end</text>
-</svg>"""
+    docImage { width = 160, height = 80 }
+        [ Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
+            [ M ( 20, 60 ) [ L ( 140, 20 ) ] ]
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 20, 60 ) }
+        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 140, 20 ) }
+        , Evg.text [ Evg.fontSize 10, Evg.fillStr "#e53935" ] { x = 20, y = 75, anchor = Evg.Middle } "start"
+        , Evg.text [ Evg.fontSize 10, Evg.fillStr "#1e88e5" ] { x = 140, y = 15, anchor = Evg.Middle } "end"
+        ]
 
 
 hv : String
 hv =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 80" width="160" height="80">
-  <path d="M 20 40 H 90 V 70" fill="none" stroke="#333" stroke-width="2"/>
-  <circle cx="20" cy="40" r="4" fill="#e53935"/>
-  <circle cx="90" cy="40" r="3" fill="#888"/>
-  <circle cx="90" cy="70" r="4" fill="#1e88e5"/>
-  <text x="55" y="35" font-size="9" fill="#666" text-anchor="middle">H 90</text>
-  <text x="100" y="57" font-size="9" fill="#666">V 70</text>
-</svg>"""
+    docImage { width = 160, height = 80 }
+        [ Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
+            [ M ( 20, 40 ) [ H 90, V 70 ] ]
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 20, 40 ) }
+        , Evg.circle [ Evg.fillStr "#888" ] { r = 3, center = ( 90, 40 ) }
+        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 90, 70 ) }
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#666" ] { x = 55, y = 35, anchor = Evg.Middle } "H 90"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#666" ] { x = 100, y = 57, anchor = Evg.Start } "V 70"
+        ]
 
 
 cubicBezier : String
 cubicBezier =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
-  <!-- control lines -->
-  <line x1="20" y1="90" x2="50" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <line x1="180" y1="90" x2="150" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <!-- curve -->
-  <path d="M 20 90 C 50 20, 150 20, 180 90" fill="none" stroke="#333" stroke-width="2"/>
-  <!-- points -->
-  <circle cx="20" cy="90" r="4" fill="#e53935"/>
-  <circle cx="50" cy="20" r="4" fill="#ff9800"/>
-  <circle cx="150" cy="20" r="4" fill="#ff9800"/>
-  <circle cx="180" cy="90" r="4" fill="#1e88e5"/>
-  <!-- labels -->
-  <text x="20" y="105" font-size="9" fill="#e53935" text-anchor="middle">start</text>
-  <text x="50" y="14" font-size="9" fill="#ff9800" text-anchor="middle">cp1</text>
-  <text x="150" y="14" font-size="9" fill="#ff9800" text-anchor="middle">cp2</text>
-  <text x="180" y="105" font-size="9" fill="#1e88e5" text-anchor="middle">end</text>
-</svg>"""
+    docImage { width = 200, height = 120 }
+        [ guide [ 3, 2 ] ( 20, 90 ) ( 50, 20 )
+        , guide [ 3, 2 ] ( 180, 90 ) ( 150, 20 )
+        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
+            [ M ( 20, 90 ) [ C ( 50, 20 ) ( 150, 20 ) ( 180, 90 ) ] ]
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 20, 90 ) }
+        , Evg.circle [ Evg.fillStr "#ff9800" ] { r = 4, center = ( 50, 20 ) }
+        , Evg.circle [ Evg.fillStr "#ff9800" ] { r = 4, center = ( 150, 20 ) }
+        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 180, 90 ) }
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#e53935" ] { x = 20, y = 105, anchor = Evg.Middle } "start"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#ff9800" ] { x = 50, y = 14, anchor = Evg.Middle } "cp1"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#ff9800" ] { x = 150, y = 14, anchor = Evg.Middle } "cp2"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 180, y = 105, anchor = Evg.Middle } "end"
+        ]
 
 
 smoothCubic : String
 smoothCubic =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 100" width="240" height="100">
-  <!-- first curve C -->
-  <line x1="20" y1="70" x2="40" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <line x1="100" y1="70" x2="80" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <path d="M 20 70 C 40 20, 80 20, 100 70" fill="none" stroke="#333" stroke-width="2"/>
-  <!-- smooth continuation S -->
-  <line x1="100" y1="70" x2="120" y2="120" stroke="#ddd" stroke-width="1" stroke-dasharray="2 2"/>
-  <line x1="180" y1="70" x2="160" y2="20" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <path d="M 100 70 S 160 20, 180 70" fill="none" stroke="#1e88e5" stroke-width="2"/>
-  <!-- reflected control point (shown as ghost) -->
-  <circle cx="120" cy="120" r="3" fill="none" stroke="#ff9800" stroke-dasharray="2 2"/>
-  <!-- points -->
-  <circle cx="20" cy="70" r="4" fill="#e53935"/>
-  <circle cx="40" cy="20" r="3" fill="#ff9800"/>
-  <circle cx="80" cy="20" r="3" fill="#ff9800"/>
-  <circle cx="100" cy="70" r="4" fill="#888"/>
-  <circle cx="160" cy="20" r="4" fill="#ff9800"/>
-  <circle cx="180" cy="70" r="4" fill="#1e88e5"/>
-  <!-- labels -->
-  <text x="120" y="90" font-size="9" fill="#ff9800" text-anchor="middle">reflected cp1</text>
-  <text x="160" y="14" font-size="9" fill="#ff9800" text-anchor="middle">cp2</text>
-  <text x="180" y="85" font-size="9" fill="#1e88e5" text-anchor="middle">end</text>
-</svg>"""
+    docImage { width = 240, height = 150 }
+        [ guide [ 3, 2 ] ( 20, 70 ) ( 40, 20 )
+        , guide [ 3, 2 ] ( 100, 70 ) ( 80, 20 )
+        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
+            [ M ( 20, 70 ) [ C ( 40, 20 ) ( 80, 20 ) ( 100, 70 ) ] ]
+        , Evg.line [ Evg.strokeStr "#ff9800", Evg.strokeWidth 1, Evg.dashPattern [ 2, 2 ] ] ( 100, 70 ) ( 120, 120 )
+        , guide [ 3, 2 ] ( 180, 70 ) ( 160, 20 )
+        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#1e88e5", Evg.strokeWidth 2 ]
+            [ M ( 100, 70 ) [ C ( 120, 120 ) ( 160, 20 ) ( 180, 70 ) ] ]
+        , Evg.circle [ Evg.fillStr "none", Evg.strokeStr "#ff9800", Evg.dashPattern [ 2, 2 ] ] { r = 3, center = ( 120, 120 ) }
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 20, 70 ) }
+        , Evg.circle [ Evg.fillStr "#ff9800" ] { r = 3, center = ( 40, 20 ) }
+        , Evg.circle [ Evg.fillStr "#ff9800" ] { r = 3, center = ( 80, 20 ) }
+        , Evg.circle [ Evg.fillStr "#888" ] { r = 4, center = ( 100, 70 ) }
+        , Evg.circle [ Evg.fillStr "#ff9800" ] { r = 4, center = ( 160, 20 ) }
+        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 180, 70 ) }
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#ff9800" ] { x = 120, y = 135, anchor = Evg.Middle } "mirrored cp1"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#ff9800" ] { x = 160, y = 14, anchor = Evg.Middle } "cp2"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 192, y = 85, anchor = Evg.Middle } "end"
+        ]
 
 
 quadraticBezier : String
 quadraticBezier =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="160" height="100">
-  <!-- control lines -->
-  <line x1="20" y1="80" x2="80" y2="15" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <line x1="80" y1="15" x2="140" y2="80" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <!-- curve -->
-  <path d="M 20 80 Q 80 15, 140 80" fill="none" stroke="#333" stroke-width="2"/>
-  <!-- points -->
-  <circle cx="20" cy="80" r="4" fill="#e53935"/>
-  <circle cx="80" cy="15" r="4" fill="#ff9800"/>
-  <circle cx="140" cy="80" r="4" fill="#1e88e5"/>
-  <!-- labels -->
-  <text x="20" y="95" font-size="9" fill="#e53935" text-anchor="middle">start</text>
-  <text x="80" y="10" font-size="9" fill="#ff9800" text-anchor="middle">control</text>
-  <text x="140" y="95" font-size="9" fill="#1e88e5" text-anchor="middle">end</text>
-</svg>"""
+    docImage { width = 160, height = 100 }
+        [ guide [ 3, 2 ] ( 20, 80 ) ( 80, 15 )
+        , guide [ 3, 2 ] ( 80, 15 ) ( 140, 80 )
+        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
+            [ M ( 20, 80 ) [ Q ( 80, 15 ) ( 140, 80 ) ] ]
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 20, 80 ) }
+        , Evg.circle [ Evg.fillStr "#ff9800" ] { r = 4, center = ( 80, 15 ) }
+        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 140, 80 ) }
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#e53935" ] { x = 20, y = 95, anchor = Evg.Middle } "start"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#ff9800" ] { x = 80, y = 10, anchor = Evg.Middle } "control"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 140, y = 95, anchor = Evg.Middle } "end"
+        ]
 
 
 smoothQuadratic : String
 smoothQuadratic =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 100" width="220" height="100">
-  <!-- first Q curve -->
-  <line x1="20" y1="70" x2="55" y2="15" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <line x1="55" y1="15" x2="90" y2="70" stroke="#ccc" stroke-width="1" stroke-dasharray="3 2"/>
-  <path d="M 20 70 Q 55 15, 90 70" fill="none" stroke="#333" stroke-width="2"/>
-  <!-- T continuation (reflected control) -->
-  <line x1="90" y1="70" x2="125" y2="125" stroke="#ddd" stroke-width="1" stroke-dasharray="2 2"/>
-  <path d="M 90 70 T 160 70" fill="none" stroke="#1e88e5" stroke-width="2"/>
-  <!-- points -->
-  <circle cx="20" cy="70" r="4" fill="#e53935"/>
-  <circle cx="55" cy="15" r="3" fill="#ff9800"/>
-  <circle cx="90" cy="70" r="4" fill="#888"/>
-  <circle cx="125" cy="125" r="3" fill="none" stroke="#ff9800" stroke-dasharray="2 2"/>
-  <circle cx="160" cy="70" r="4" fill="#1e88e5"/>
-  <!-- labels -->
-  <text x="55" y="10" font-size="9" fill="#ff9800" text-anchor="middle">control</text>
-  <text x="125" y="90" font-size="9" fill="#ff9800" text-anchor="middle">reflected</text>
-  <text x="160" y="85" font-size="9" fill="#1e88e5" text-anchor="middle">end</text>
-</svg>"""
+    docImage { width = 220, height = 150 }
+        [ guide [ 3, 2 ] ( 20, 70 ) ( 55, 15 )
+        , guide [ 3, 2 ] ( 55, 15 ) ( 90, 70 )
+        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
+            [ M ( 20, 70 ) [ Q ( 55, 15 ) ( 90, 70 ) ] ]
+        , Evg.line [ Evg.strokeStr "#ff9800", Evg.strokeWidth 1, Evg.dashPattern [ 2, 2 ] ] ( 90, 70 ) ( 125, 125 )
+        , Evg.line [ Evg.strokeStr "#ff9800", Evg.strokeWidth 1, Evg.dashPattern [ 2, 2 ] ] ( 125, 125 ) ( 160, 70 )
+        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#1e88e5", Evg.strokeWidth 2 ]
+            [ M ( 90, 70 ) [ Q ( 125, 125 ) ( 160, 70 ) ] ]
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 20, 70 ) }
+        , Evg.circle [ Evg.fillStr "#ff9800" ] { r = 3, center = ( 55, 15 ) }
+        , Evg.circle [ Evg.fillStr "#888" ] { r = 4, center = ( 90, 70 ) }
+        , Evg.circle [ Evg.fillStr "none", Evg.strokeStr "#ff9800", Evg.dashPattern [ 2, 2 ] ] { r = 3, center = ( 125, 125 ) }
+        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 160, 70 ) }
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#ff9800" ] { x = 55, y = 10, anchor = Evg.Middle } "control"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#ff9800" ] { x = 125, y = 140, anchor = Evg.Middle } "mirrored control"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 172, y = 85, anchor = Evg.Middle } "end"
+        ]
 
 
 arc : String
 arc =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
-  <!-- large arc -->
-  <path d="M 40 60 A 40 40 0 1 1 120 60" fill="none" stroke="#333" stroke-width="2"/>
-  <!-- small arc (same endpoints) -->
-  <path d="M 40 60 A 40 40 0 0 1 120 60" fill="none" stroke="#1e88e5" stroke-width="2" stroke-dasharray="4 3"/>
-  <!-- endpoints -->
-  <circle cx="40" cy="60" r="4" fill="#e53935"/>
-  <circle cx="120" cy="60" r="4" fill="#1e88e5"/>
-  <!-- radius annotation -->
-  <line x1="80" y1="20" x2="120" y2="20" stroke="#888" stroke-width="1"/>
-  <text x="100" y="16" font-size="9" fill="#888" text-anchor="middle">rx</text>
-  <!-- labels -->
-  <text x="80" y="110" font-size="9" fill="#333" text-anchor="middle">large-arc=1 (solid)</text>
-  <text x="80" y="52" font-size="9" fill="#1e88e5" text-anchor="middle">large-arc=0 (dashed)</text>
-</svg>"""
+    docImage { width = 200, height = 140 }
+        [ Evg.path [ Evg.fillStr "none", Evg.strokeStr "#333", Evg.strokeWidth 2 ]
+            [ M ( 75, 85 ) [ A 40 40 0 True True ( 125, 85 ) ] ]
+        , Evg.path [ Evg.fillStr "none", Evg.strokeStr "#1e88e5", Evg.strokeWidth 2, Evg.dashPattern [ 4, 3 ] ]
+            [ M ( 75, 85 ) [ A 40 40 0 False True ( 125, 85 ) ] ]
+        , Evg.circle [ Evg.fillStr "#e53935" ] { r = 4, center = ( 75, 85 ) }
+        , Evg.circle [ Evg.fillStr "#1e88e5" ] { r = 4, center = ( 125, 85 ) }
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#333" ] { x = 100, y = 14, anchor = Evg.Middle } "large-arc=1 (solid)"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 100, y = 120, anchor = Evg.Middle } "large-arc=0 (dashed)"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#e53935" ] { x = 62, y = 88, anchor = Evg.End } "start"
+        , Evg.text [ Evg.fontSize 9, Evg.fillStr "#1e88e5" ] { x = 138, y = 88, anchor = Evg.Start } "end"
+        ]

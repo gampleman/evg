@@ -1,10 +1,14 @@
 module Shapes exposing (svgs)
 
 {-| Generates documentation images for basic shape functions.
+
+These are produced with `Evg.toString` itself, so the pictures in the docs
+are guaranteed to show what the library actually renders.
+
 -}
 
-import Svg
-import Svg.Attributes
+import Evg
+import Evg.Advanced as Advanced
 
 
 type alias DocSvg =
@@ -22,45 +26,55 @@ svgs =
     ]
 
 
+{-| Render at double display size: the width/height attributes are twice the
+viewBox, keeping the drawing coordinates unchanged.
+-}
+docImage : { width : Float, height : Float } -> List (Evg.Evg Never) -> String
+docImage dims children =
+    Evg.toString
+        [ Advanced.viewBox 0 0 dims.width dims.height ]
+        { width = dims.width * 2, height = dims.height * 2 }
+        children
+
+
 lineSvg : String
 lineSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40" width="120" height="40">
-  <line x1="10" y1="20" x2="110" y2="20" stroke="black" stroke-width="2"/>
-  <circle cx="10" cy="20" r="3" fill="#666"/>
-  <circle cx="110" cy="20" r="3" fill="#666"/>
-</svg>"""
+    docImage { width = 120, height = 40 }
+        [ Evg.line [ Evg.strokeWidth 2 ] ( 10, 20 ) ( 110, 20 )
+        , Evg.circle [ Evg.fillStr "#666" ] { r = 3, center = ( 10, 20 ) }
+        , Evg.circle [ Evg.fillStr "#666" ] { r = 3, center = ( 110, 20 ) }
+        ]
 
 
 rectSvg : String
 rectSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80" width="120" height="80">
-  <rect x="10" y="10" width="100" height="60" fill="navy" rx="0"/>
-</svg>"""
+    docImage { width = 120, height = 80 }
+        [ Evg.rect [ Evg.fillStr "navy" ] { x = 10, y = 10, width = 100, height = 60 } ]
 
 
 circleSvg : String
 circleSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-  <circle cx="50" cy="50" r="40" fill="crimson"/>
-</svg>"""
+    docImage { width = 100, height = 100 }
+        [ Evg.circle [ Evg.fillStr "crimson" ] { r = 40, center = ( 50, 50 ) } ]
 
 
 ellipseSvg : String
 ellipseSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100" width="160" height="100">
-  <ellipse cx="80" cy="50" rx="70" ry="35" fill="mediumpurple"/>
-</svg>"""
+    docImage { width = 160, height = 100 }
+        [ Evg.ellipse [ Evg.fillStr "mediumpurple" ] { rx = 70, ry = 35, center = ( 80, 50 ) } ]
 
 
 polygonSvg : String
 polygonSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 110" width="120" height="110">
-  <polygon points="60,10 110,100 10,100" fill="limegreen"/>
-</svg>"""
+    docImage { width = 120, height = 110 }
+        [ Evg.polygon [ Evg.fillStr "limegreen" ]
+            [ ( 60, 10 ), ( 110, 100 ), ( 10, 100 ) ]
+        ]
 
 
 polylineSvg : String
 polylineSvg =
-    """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="120" height="60">
-  <polyline points="10,50 30,10 50,40 70,20 90,45 110,15" fill="none" stroke="black" stroke-width="2"/>
-</svg>"""
+    docImage { width = 120, height = 60 }
+        [ Evg.polyline [ Evg.strokeWidth 2 ]
+            [ ( 10, 50 ), ( 30, 10 ), ( 50, 40 ), ( 70, 20 ), ( 90, 45 ), ( 110, 15 ) ]
+        ]

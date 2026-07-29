@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 324 64" width="648" height="128">
+  <defs>
+    <filter id="comp-in" filterUnits="userSpaceOnUse" x="3" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="23" y="18" width="22" height="22" result="sq"/>
+      <feComposite in="SourceGraphic" in2="sq" operator="in"/>
+    </filter>
+    <filter id="comp-out" filterUnits="userSpaceOnUse" x="57" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="77" y="18" width="22" height="22" result="sq"/>
+      <feComposite in="SourceGraphic" in2="sq" operator="out"/>
+    </filter>
+    <filter id="comp-atop" filterUnits="userSpaceOnUse" x="111" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="131" y="18" width="22" height="22" result="sq"/>
+      <feComposite in="SourceGraphic" in2="sq" operator="atop"/>
+    </filter>
+    <filter id="comp-over" filterUnits="userSpaceOnUse" x="165" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="185" y="18" width="22" height="22" result="sq"/>
+      <feComposite in="SourceGraphic" in2="sq" operator="over"/>
+    </filter>
+    <filter id="comp-xor" filterUnits="userSpaceOnUse" x="219" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="239" y="18" width="22" height="22" result="sq"/>
+      <feComposite in="SourceGraphic" in2="sq" operator="xor"/>
+    </filter>
+    <filter id="comp-arith" filterUnits="userSpaceOnUse" x="273" y="2" width="50" height="46">
+      <feFlood flood-color="gold" x="293" y="18" width="22" height="22" result="sq"/>
+      <feComposite in="SourceGraphic" in2="sq" operator="arithmetic" k1="0" k2="0.5" k3="0.5" k4="0"/>
+    </filter>
+  </defs>
+  <circle cx="23" cy="24" r="13" fill="royalblue" filter="url(#comp-in)"/>
+  <circle cx="77" cy="24" r="13" fill="royalblue" filter="url(#comp-out)"/>
+  <circle cx="131" cy="24" r="13" fill="royalblue" filter="url(#comp-atop)"/>
+  <circle cx="185" cy="24" r="13" fill="royalblue" filter="url(#comp-over)"/>
+  <circle cx="239" cy="24" r="13" fill="royalblue" filter="url(#comp-xor)"/>
+  <circle cx="293" cy="24" r="13" fill="royalblue" filter="url(#comp-arith)"/>
+  <text x="27" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">in</text>
+  <text x="81" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">out</text>
+  <text x="135" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">atop</text>
+  <text x="189" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">over</text>
+  <text x="243" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">xor</text>
+  <text x="297" y="58" font-family="sans-serif" font-size="10" text-anchor="middle" fill="#555">arithmetic</text>
+</svg>
