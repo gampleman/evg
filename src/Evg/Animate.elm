@@ -1029,7 +1029,9 @@ buildSegmentedTimeline options globalEasing dur runs =
                                 wrappedNode =
                                     Svg.g [ Svg.Attributes.visibility "hidden" ] [ animatedNode, visibilityAnim ]
                             in
-                            Internal.Evg { content = Internal.Raw wrappedNode, ownMatrix = Internal.identityMat, children = [], hash = 0, defs = firstRecord.defs, attrs = [] }
+                            -- SMIL timelines have no serializable form, so the
+                            -- fallback is empty: toString omits the animation.
+                            Internal.Evg { content = Internal.Raw wrappedNode Internal.emptyEvg, ownMatrix = Internal.identityMat, children = [], hash = 0, defs = firstRecord.defs, attrs = [] }
                 )
                 runs
     in

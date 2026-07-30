@@ -1,6 +1,7 @@
 module Evg.Advanced exposing
     ( viewBox, preserveAspectRatio, AlignValue(..), MeetOrSlice(..)
     , customElement, customAttribute, customFilter
+    , fromSvg, notSupported
     , nestedSvg
     , link
     , role, ariaLabel, ariaHidden
@@ -30,6 +31,15 @@ the drawing and its on-screen area have different shapes.
 @docs customElement, customAttribute, customFilter
 
 
+# Embedding elm/svg
+
+If you already have graphics built with [`elm/svg`](https://package.elm-lang.org/packages/elm/svg/latest/),
+for example an icon exported from a drawing program, you can drop it straight
+into an Evg drawing rather than porting it.
+
+@docs fromSvg, notSupported
+
+
 # Nested Viewports
 
 @docs nestedSvg
@@ -55,6 +65,7 @@ import Bitwise
 import Dict
 import Evg
 import Evg.Internal as Internal exposing (Attribute(..))
+import Svg
 import Svg.Attributes
 import VirtualDom
 
@@ -212,8 +223,19 @@ that this library doesn't provide a dedicated function for.
         ]
         []
 
+Any attribute is accepted here, including the ordinary ones from `Evg` and
+its other modules, since the library cannot know what a tag you supply
+yourself understands. That also means nothing is checked for you: it is up to
+you to only pass attributes the element actually supports.
+
+    Advanced.customElement "foreignObject"
+        [ Advanced.customAttribute "width" "200"
+        , Evg.opacity 0.5
+        ]
+        []
+
 -}
-customElement : String -> List (Evg.Attribute {} msg) -> List (Internal.Evg msg) -> Internal.Evg msg
+customElement : String -> List (Evg.Attribute a msg) -> List (Internal.Evg msg) -> Internal.Evg msg
 customElement tag attrs children =
     let
         { vdomAttrs, eventBuilders, ownMatrix, defs, inspectable } =
@@ -231,6 +253,119 @@ library doesn't provide a dedicated function for.
 customAttribute : String -> String -> Evg.Attribute a msg
 customAttribute key value =
     Attr (Internal.hashStringToInt key |> Internal.mixString value) key value (VirtualDom.attribute key value)
+
+
+{-| Places graphics built with [`elm/svg`](https://package.elm-lang.org/packages/elm/svg/latest/)
+into an Evg drawing. Useful for icons and other assets exported from a
+graphics program, which tools convert to `elm/svg` mechanically, so you can
+use them without porting them by hand.
+
+    import Svg
+    import Svg.Attributes
+
+    Evg.svg []
+        { width = 100, height = 100 }
+        [ Evg.circle [] { r = 40, center = ( 50, 50 ) }
+        , Advanced.fromSvg
+            { id = "logo"
+            , svg =
+                Svg.g []
+                    [ Svg.path
+                        [ Svg.Attributes.d "M0 0 L9 9" ]
+                        []
+                    ]
+            , fallback = Advanced.notSupported
+            }
+        ]
+
+The fields:
+
+  - `svg` is the graphic to embed.
+  - `id` names this piece, and must be unique within your drawing. The
+    library cannot look inside an `elm/svg` value, so the name stands in for
+    the content when it needs to tell pieces apart, such as when one is used
+    as a clip stencil. Two pieces sharing a name can be mistaken for each
+    other.
+  - `fallback` is drawn whenever something is asked of the graphic that the
+    library cannot do to an opaque value. Pass
+    [`notSupported`](#notSupported) to get a visible placeholder, `Evg.none`
+    to leave a gap, or draw a real stand-in with Evg if you want the result
+    to look right.
+
+The fallback stands in for the graphic in these cases, so an unsupported
+combination shows up rather than failing quietly:
+
+  - [`Evg.toString`](Evg#toString) always uses it, since the embedded markup
+    cannot be read back out of the virtual DOM.
+  - Applying an [`Evg.Animate`](Evg-Animate) function uses it. Animations
+    work by placing an element inside the shape they animate, and the inside
+    of an embedded value is not ours to change.
+
+One limit has no fallback, because the graphic still draws correctly: event
+handlers on shapes within it report coordinates in the drawing's own space
+rather than the shape's, since the library does not know what transforms the
+embedded markup applies.
+
+Attributes still work normally, since those go on a wrapper around the
+embedded content, so you can position, fade, or clip an embedded graphic:
+
+    Evg.group [ Evg.opacity 0.5 ]
+        [ Advanced.fromSvg
+            { id = "logo"
+            , svg = myIcon
+            , fallback = Advanced.notSupported
+            }
+        ]
+
+-}
+fromSvg :
+    { id : String, svg : Svg.Svg msg, fallback : Evg.Evg msg }
+    -> Evg.Evg msg
+fromSvg { id, svg, fallback } =
+    Internal.keyedNode (Internal.hashStringToInt id) svg fallback
+
+
+{-| A visible "not supported" placeholder: a red box with white lettering,
+sized to fill whatever area it is placed in. Use it as the `fallback` for
+[`fromSvg`](#fromSvg) so that anything the library cannot serialize shows up
+obviously in an exported file rather than silently leaving a hole.
+
+The red box fills whatever area it is given, whether that is wide, tall, or
+square, and the lettering stays readable at any of those shapes:
+
+![the placeholder shown in a wide area and a tall one](https://raw.githubusercontent.com/gampleman/evg/master/docs/images/not-supported.svg)
+
+-}
+notSupported : Evg.Evg msg
+notSupported =
+    -- The box is a plain rect at 100% of the container, so it stretches on
+    -- its own. The lettering sits in its own viewport that letterboxes
+    -- instead of stretching, so it keeps its proportions at any shape. It is
+    -- a sibling of the box rather than inside it, since anything within a
+    -- stretched viewport inherits that distortion.
+    customElement "g"
+        []
+        [ customElement "rect"
+            [ customAttribute "width" "100%"
+            , customAttribute "height" "100%"
+            , Evg.fillStr "#c00"
+            ]
+            []
+        , customElement "svg"
+            [ customAttribute "width" "100%"
+            , customAttribute "height" "100%"
+            , viewBox 0 0 100 40
+            , preserveAspectRatio XMidYMid Meet
+            ]
+            [ Evg.text
+                [ Evg.fillStr "white"
+                , Evg.fontSize 11
+                , Evg.fontFamily "sans-serif"
+                ]
+                { x = 50, y = 24, anchor = Evg.Middle }
+                "NOT SUPPORTED"
+            ]
+        ]
 
 
 {-| Creates a smaller drawing area inside the current one, with its own

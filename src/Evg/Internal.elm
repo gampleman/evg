@@ -21,6 +21,7 @@ module Evg.Internal exposing
     , coordinateSpaceHash
     , dedupeAttrs
     , element
+    , emptyEvg
     , filterElem
     , filterPrimitives
     , filterToEvg
@@ -28,6 +29,7 @@ module Evg.Internal exposing
     , hashStringToInt
     , identityMat
     , invertMat
+    , keyedNode
     , mapEvg
     , mixColor
     , mixFloat
@@ -235,7 +237,9 @@ walked and serialized, not only handed to the virtual DOM.
     the equivalent data lives in the record's `attrs` field. Event handlers
     are builders awaiting the accumulated transform matrix.
   - `TextContent`: character data inside an element (not a `<text>` tag).
-  - `Raw`: an opaque VirtualDom node. Renders fine; `toString` skips it.
+  - `Raw`: an opaque VirtualDom node, plus a stand-in used when serializing.
+    The node renders as-is, but its markup cannot be read back out of the
+    virtual DOM, so `toString` emits the stand-in instead.
   - `RawLazy`: a lazily-rendered subtree. The node preserves
     `VirtualDom.lazy` caching; the thunk lets `toString` force the content.
 
@@ -243,7 +247,7 @@ walked and serialized, not only handed to the virtual DOM.
 type Content msg
     = Tag String (List (VirtualDom.Attribute msg)) (List (Mat23 -> VirtualDom.Attribute msg))
     | TextContent String
-    | Raw (VirtualDom.Node msg)
+    | Raw (VirtualDom.Node msg) (Evg msg)
     | RawLazy (VirtualDom.Node msg) (() -> Evg msg)
 
 
@@ -289,8 +293,18 @@ toNodeWith parentAccum (Evg { content, ownMatrix, children }) =
         TextContent str ->
             VirtualDom.text str
 
-        Raw node ->
-            node
+        Raw node fallback ->
+            -- Children only ever arrive here from features that work by
+            -- putting an element inside the shape they modify, above all the
+            -- Animate module. That is impossible for an opaque value, so
+            -- rather than silently dropping the effect we draw the fallback,
+            -- which is where an explanation of what went wrong can live.
+            case children of
+                [] ->
+                    node
+
+                _ ->
+                    toNodeWith (composeMat parentAccum ownMatrix) fallback
 
         RawLazy node _ ->
             node
@@ -405,7 +419,36 @@ svgNode tag =
 
 wrapNode : VirtualDom.Node msg -> Evg msg
 wrapNode node =
-    Evg { content = Raw node, ownMatrix = identityMat, children = [], hash = 0, defs = [], attrs = [] }
+    Evg { content = Raw node emptyEvg, ownMatrix = identityMat, children = [], hash = 0, defs = [], attrs = [] }
+
+
+{-| A node that renders and serializes to nothing.
+-}
+emptyEvg : Evg msg
+emptyEvg =
+    Evg { content = TextContent "", ownMatrix = identityMat, children = [], hash = 0, defs = [], attrs = [] }
+
+
+{-| Like `wrapNode`, but with a caller-supplied content hash and a stand-in
+for serialization. Opaque nodes cannot be hashed or read by inspecting them,
+so anything user-facing needs both: without a key, two different raw nodes
+would both hash to 0 and def ids derived from content (clip paths, masks,
+symbols) would collide and dedupe wrongly.
+
+The stand-in's own defs travel with the node, so a fallback that uses a
+gradient or pattern still resolves when serialized.
+
+-}
+keyedNode : Int -> VirtualDom.Node msg -> Evg msg -> Evg msg
+keyedNode hash node fallback =
+    Evg
+        { content = Raw node fallback
+        , ownMatrix = identityMat
+        , children = []
+        , hash = hash
+        , defs = evgDefs fallback
+        , attrs = []
+        }
 
 
 {-| A bare text node (character data inside an element).
@@ -439,8 +482,8 @@ mapContent fn content =
         TextContent str ->
             TextContent str
 
-        Raw node ->
-            Raw (VirtualDom.map fn node)
+        Raw node fallback ->
+            Raw (VirtualDom.map fn node) (mapEvg fn fallback)
 
         RawLazy node thunk ->
             RawLazy (VirtualDom.map fn node) (\() -> mapEvg fn (thunk ()))
@@ -660,8 +703,8 @@ serialize (Evg { content, children, attrs }) =
         TextContent str ->
             escapeText str
 
-        Raw _ ->
-            ""
+        Raw _ fallback ->
+            serialize fallback
 
         RawLazy _ thunk ->
             serializeWithLocalDefs (thunk ())
