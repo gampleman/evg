@@ -20,6 +20,7 @@
     "test:review": "elm-review",
     "fix": "npm-run-all --print-name --sequential fix:format fix:review",
     "fix:format": "elm-format src/ tests/*.elm review --yes",
+    "fix:format-examples": "elm-format tests/VerifyExamples --yes",
     "fix:review": "elm-review --fix",
     "docs:generate": "node docs/generate.js",
     "examples:serve": "node examples/serve.js",

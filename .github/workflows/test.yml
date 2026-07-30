@@ -13,17 +13,17 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Setup Node.js environment
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: lts/*
 
       # Re-use node_modules between runs until package-lock.json changes.
       - name: Cache node_modules
-        id: internal-cache-node_modules
-        uses: actions/cache@v3
+        id: cache-node_modules
+        uses: actions/cache@v6
         with:
           path: node_modules
           key: internal-node_modules-ubuntu-latest.x-${{ hashFiles('package-lock.json') }}
@@ -32,14 +32,13 @@ jobs:
       # review/elm.json changes. The Elm compiler saves downloaded Elm packages
       # to ~/.elm, and elm-tooling saves downloaded tool executables there.
       - name: Cache ~/.elm
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ~/.elm
           key: elm-${{ hashFiles('elm.json', 'review/elm.json') }}
 
       - name: Install npm dependencies
         if: steps.cache-node_modules.outputs.cache-hit != 'true'
-
         run: npm ci
 
       - name: Run tests
@@ -57,17 +56,17 @@ jobs:
 #     # Steps represent a sequence of tasks that will be executed as part of the job
 #     steps:
 #       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-#       - uses: actions/checkout@v3
+#       - uses: actions/checkout@v7
 
 #       - name: Setup Node.js environment
-#         uses: actions/setup-node@v3
+#         uses: actions/setup-node@v7
 #         with:
 #           node-version: lts/*
 
 #       # Re-use node_modules between runs until package-lock.json changes.
 #       - name: Cache node_modules
-#         id: internal-cache-node_modules
-#         uses: actions/cache@v3
+#         id: cache-node_modules
+#         uses: actions/cache@v6
 #         with:
 #           path: node_modules
 #           key: internal-node_modules-ubuntu-latest.x-${{ hashFiles('package-lock.json') }}
@@ -76,7 +75,7 @@ jobs:
 #       # review/elm.json changes. The Elm compiler saves downloaded Elm packages
 #       # to ~/.elm, and elm-tooling saves downloaded tool executables there.
 #       - name: Cache ~/.elm
-#         uses: actions/cache@v3
+#         uses: actions/cache@v6
 #         with:
 #           path: ~/.elm
 #           key: elm-${{ hashFiles('elm.json', 'review/elm.json') }}
