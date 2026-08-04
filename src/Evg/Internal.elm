@@ -889,9 +889,12 @@ type alias BaseFilter a =
 
 
 type alias FilterPayload =
-    BaseFilter
-        { defs : Dict String (BaseFilter {})
-        }
+    { defs : Dict String (BaseFilter {})
+    , name : String
+    , id : String
+    , args : List ( String, String )
+    , children : List ( String, List ( String, String ) )
+    }
 
 
 type Filter
