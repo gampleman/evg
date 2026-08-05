@@ -438,7 +438,7 @@ toSegmentsAccum currentPoint paths acc =
 segmentsToGeometric : ( Float, Float ) -> List PathSegment -> List Segment
 segmentsToGeometric start segments =
     let
-        go current remaining acc =
+        go current previous remaining acc =
             case remaining of
                 [] ->
                     List.reverse acc
@@ -446,20 +446,58 @@ segmentsToGeometric start segments =
                 seg :: rest ->
                     let
                         ( nextPoint, segment ) =
-                            resolveSegment start current seg
+                            resolveSegment start current previous seg
                     in
                     case segment of
                         Just geom ->
-                            go nextPoint rest (geom :: acc)
+                            go nextPoint (Just geom) rest (geom :: acc)
 
                         Nothing ->
-                            go nextPoint rest acc
+                            go nextPoint Nothing rest acc
     in
-    go start segments []
+    go start Nothing segments []
 
 
-resolveSegment : ( Float, Float ) -> ( Float, Float ) -> PathSegment -> ( ( Float, Float ), Maybe Segment )
-resolveSegment subpathStart ( cx, cy ) seg =
+{-| Reflect a point about the current point.
+-}
+reflectAbout : ( Float, Float ) -> ( Float, Float ) -> ( Float, Float )
+reflectAbout ( cx, cy ) ( px, py ) =
+    ( 2 * cx - px, 2 * cy - py )
+
+
+{-| The first control point that `S` implies: the reflection, about the
+current point, of the previous cubic's second control point. Per the SVG
+specification a smooth cubic only chains off another cubic (`C`, `c`, `S`,
+`s`); after anything else the control point is coincident with the current
+point.
+-}
+smoothCubicControl : ( Float, Float ) -> Maybe Segment -> ( Float, Float )
+smoothCubicControl current previous =
+    case previous of
+        Just (Cubic { controlPoint2 }) ->
+            reflectAbout current controlPoint2
+
+        _ ->
+            current
+
+
+{-| The control point that `T` implies: the reflection, about the current
+point, of the previous quadratic's control point. A smooth quadratic only
+chains off another quadratic (`Q`, `q`, `T`, `t`); after anything else the
+control point is coincident with the current point.
+-}
+smoothQuadraticControl : ( Float, Float ) -> Maybe Segment -> ( Float, Float )
+smoothQuadraticControl current previous =
+    case previous of
+        Just (Quadratic { controlPoint }) ->
+            reflectAbout current controlPoint
+
+        _ ->
+            current
+
+
+resolveSegment : ( Float, Float ) -> ( Float, Float ) -> Maybe Segment -> PathSegment -> ( ( Float, Float ), Maybe Segment )
+resolveSegment subpathStart ( cx, cy ) previous seg =
     case seg of
         L to ->
             ( to, Just (Line { from = ( cx, cy ), to = to }) )
@@ -474,13 +512,30 @@ resolveSegment subpathStart ( cx, cy ) seg =
             ( to, Just (Cubic { from = ( cx, cy ), controlPoint1 = cp1, controlPoint2 = cp2, to = to }) )
 
         S cp2 to ->
-            ( to, Just (Cubic { from = ( cx, cy ), controlPoint1 = ( cx, cy ), controlPoint2 = cp2, to = to }) )
+            ( to
+            , Just
+                (Cubic
+                    { from = ( cx, cy )
+                    , controlPoint1 = smoothCubicControl ( cx, cy ) previous
+                    , controlPoint2 = cp2
+                    , to = to
+                    }
+                )
+            )
 
         Q cp to ->
             ( to, Just (Quadratic { from = ( cx, cy ), controlPoint = cp, to = to }) )
 
         T to ->
-            ( to, Just (Quadratic { from = ( cx, cy ), controlPoint = ( cx, cy ), to = to }) )
+            ( to
+            , Just
+                (Quadratic
+                    { from = ( cx, cy )
+                    , controlPoint = smoothQuadraticControl ( cx, cy ) previous
+                    , to = to
+                    }
+                )
+            )
 
         A rx ry rotation largeArc sweep to ->
             ( to, Just (Arc { from = ( cx, cy ), rx = rx, ry = ry, rotation = rotation, largeArc = largeArc, sweep = sweep, to = to }) )
@@ -498,11 +553,11 @@ resolveSegment subpathStart ( cx, cy ) seg =
             )
 
         Rel rel ->
-            resolveRelSegment ( cx, cy ) rel
+            resolveRelSegment ( cx, cy ) previous rel
 
 
-resolveRelSegment : ( Float, Float ) -> RelativeSegment -> ( ( Float, Float ), Maybe Segment )
-resolveRelSegment ( cx, cy ) rel =
+resolveRelSegment : ( Float, Float ) -> Maybe Segment -> RelativeSegment -> ( ( Float, Float ), Maybe Segment )
+resolveRelSegment ( cx, cy ) previous rel =
     case rel of
         RL ( dx, dy ) ->
             let
@@ -537,7 +592,16 @@ resolveRelSegment ( cx, cy ) rel =
                 to =
                     ( cx + dx, cy + dy )
             in
-            ( to, Just (Cubic { from = ( cx, cy ), controlPoint1 = ( cx, cy ), controlPoint2 = ( cx + dx2, cy + dy2 ), to = to }) )
+            ( to
+            , Just
+                (Cubic
+                    { from = ( cx, cy )
+                    , controlPoint1 = smoothCubicControl ( cx, cy ) previous
+                    , controlPoint2 = ( cx + dx2, cy + dy2 )
+                    , to = to
+                    }
+                )
+            )
 
         RQ ( dx1, dy1 ) ( dx, dy ) ->
             let
@@ -551,7 +615,15 @@ resolveRelSegment ( cx, cy ) rel =
                 to =
                     ( cx + dx, cy + dy )
             in
-            ( to, Just (Quadratic { from = ( cx, cy ), controlPoint = ( cx, cy ), to = to }) )
+            ( to
+            , Just
+                (Quadratic
+                    { from = ( cx, cy )
+                    , controlPoint = smoothQuadraticControl ( cx, cy ) previous
+                    , to = to
+                    }
+                )
+            )
 
         RA rx ry rotation largeArc sweep ( dx, dy ) ->
             let
