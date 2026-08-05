@@ -13,6 +13,7 @@ suite =
         , segmentConversionTests
         , roundTripTests
         , measurementTests
+        , smoothCurveTests
         ]
 
 
@@ -366,3 +367,104 @@ absolutePathSegmentFuzzer =
 absolutePathSegment : PathSegment -> PathSegment
 absolutePathSegment seg =
     seg
+
+
+smoothCurveTests : Test
+smoothCurveTests =
+    describe "smooth curve control point reflection"
+        [ test "S reflects the previous cubic's second control point" <|
+            -- Spec example: M100,200 C100,100 250,100 250,200 S400,300 400,200
+            -- The implied cp1 is (250,100) mirrored through (250,200).
+            \_ ->
+                Evg.Path.toSegments
+                    [ M ( 100, 200 )
+                        [ C ( 100, 100 ) ( 250, 100 ) ( 250, 200 )
+                        , S ( 400, 300 ) ( 400, 200 )
+                        ]
+                    ]
+                    |> List.drop 1
+                    |> Expect.equal
+                        [ Cubic
+                            { from = ( 250, 200 )
+                            , controlPoint1 = ( 250, 300 )
+                            , controlPoint2 = ( 400, 300 )
+                            , to = ( 400, 200 )
+                            }
+                        ]
+        , test "T reflects the previous quadratic's control point" <|
+            -- Spec example: M200,300 Q400,50 600,300 T1000,300
+            \_ ->
+                Evg.Path.toSegments
+                    [ M ( 200, 300 )
+                        [ Q ( 400, 50 ) ( 600, 300 )
+                        , T ( 1000, 300 )
+                        ]
+                    ]
+                    |> List.drop 1
+                    |> Expect.equal
+                        [ Quadratic
+                            { from = ( 600, 300 )
+                            , controlPoint = ( 800, 550 )
+                            , to = ( 1000, 300 )
+                            }
+                        ]
+        , test "S after a non-curve uses the current point" <|
+            \_ ->
+                Evg.Path.toSegments
+                    [ M ( 0, 0 ) [ L ( 10, 0 ), S ( 20, 10 ) ( 30, 0 ) ] ]
+                    |> List.drop 1
+                    |> Expect.equal
+                        [ Cubic
+                            { from = ( 10, 0 )
+                            , controlPoint1 = ( 10, 0 )
+                            , controlPoint2 = ( 20, 10 )
+                            , to = ( 30, 0 )
+                            }
+                        ]
+        , test "S does not chain off a quadratic" <|
+            -- Smooth cubics only continue cubics, so this falls back rather
+            -- than reflecting the quadratic's control point.
+            \_ ->
+                Evg.Path.toSegments
+                    [ M ( 0, 0 ) [ Q ( 5, 5 ) ( 10, 0 ), S ( 20, 10 ) ( 30, 0 ) ] ]
+                    |> List.drop 1
+                    |> Expect.equal
+                        [ Cubic
+                            { from = ( 10, 0 )
+                            , controlPoint1 = ( 10, 0 )
+                            , controlPoint2 = ( 20, 10 )
+                            , to = ( 30, 0 )
+                            }
+                        ]
+        , test "consecutive T commands keep reflecting" <|
+            \_ ->
+                Evg.Path.toSegments
+                    [ M ( 0, 0 ) [ Q ( 10, -10 ) ( 20, 0 ), T ( 40, 0 ), T ( 60, 0 ) ] ]
+                    |> List.map
+                        (\seg ->
+                            case seg of
+                                Quadratic { controlPoint } ->
+                                    controlPoint
+
+                                _ ->
+                                    ( 0, 0 )
+                        )
+                    |> Expect.equal [ ( 10, -10 ), ( 30, 10 ), ( 50, -10 ) ]
+        , test "the relative s reflects too" <|
+            \_ ->
+                Evg.Path.toSegments
+                    [ M ( 100, 200 )
+                        [ C ( 100, 100 ) ( 250, 100 ) ( 250, 200 )
+                        , Evg.Path.s ( 150, 100 ) ( 150, 0 )
+                        ]
+                    ]
+                    |> List.drop 1
+                    |> Expect.equal
+                        [ Cubic
+                            { from = ( 250, 200 )
+                            , controlPoint1 = ( 250, 300 )
+                            , controlPoint2 = ( 400, 300 )
+                            , to = ( 400, 200 )
+                            }
+                        ]
+        ]
