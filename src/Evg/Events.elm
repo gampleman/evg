@@ -728,7 +728,9 @@ touchAction value =
                 Manipulation ->
                     "manipulation"
     in
-    Attr (Internal.mixString str taHash_) "touch-action" str (VirtualDom.attribute "touch-action" str)
+    -- `touch-action` is a CSS property, not an SVG presentation attribute:
+    -- as an attribute browsers ignore it, so it has to go in as a style.
+    Attr (Internal.mixString str taHash_) "style" ("touch-action: " ++ str) (VirtualDom.style "touch-action" str)
 
 
 {-| Controls which parts of a shape respond to pointer events.

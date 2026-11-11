@@ -79,6 +79,15 @@ const html = `<!DOCTYPE html>
       requestAnimationFrame(highlightAll);
     });
     observer.observe(document.body, { childList: true, subtree: true });
+
+    // The examples are rendered by Elm after the page loads, too late for the
+    // browser's own jump to a #fragment, so jump once they're on screen.
+    function scrollToHash() {
+      var target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      if (target) target.scrollIntoView();
+    }
+    requestAnimationFrame(function() { requestAnimationFrame(scrollToHash); });
+    window.addEventListener("hashchange", scrollToHash);
   </script>
 </body>
 </html>`;
@@ -117,7 +126,10 @@ const server = http.createServer((req, res) => {
   res.end(fs.readFileSync(filePath));
 });
 
-server.listen(PORT, () => {
-  console.log(`\nExamples server running at http://localhost:${PORT}`);
+// Loopback only: this is a local preview, not something to expose on the
+// network. Without a host, Node listens on every interface.
+const HOST = "127.0.0.1";
+server.listen(PORT, HOST, () => {
+  console.log(`\nExamples server running at http://${HOST}:${PORT}`);
   console.log("Press Ctrl+C to stop.\n");
 });
