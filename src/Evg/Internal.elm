@@ -4,6 +4,7 @@ module Evg.Internal exposing
     , Content(..)
     , CoordinateSpace(..)
     , Def(..)
+    , Easing(..)
     , Evg(..)
     , Filter(..)
     , FilterPayload
@@ -20,6 +21,7 @@ module Evg.Internal exposing
     , coordinateSpaceData
     , coordinateSpaceHash
     , dedupeAttrs
+    , easingFunction
     , element
     , emptyEvg
     , filterElem
@@ -55,6 +57,70 @@ import VirtualDom
 
 type Supported
     = Supported Never
+
+
+{-| A speed profile, shared by `Evg.Animate` (which hands it to the browser
+as a SMIL key spline) and `Evg.Drag` (which evaluates it itself).
+-}
+type Easing
+    = Linear
+    | EaseInOut
+    | EaseIn
+    | EaseOut
+    | CubicBezier Float Float Float Float
+
+
+{-| Evaluate an easing at progress `x` (0 to 1). Every easing is a cubic
+Bézier curve from (0, 0) to (1, 1) with two control points, the same curves
+`Evg.Animate` asks the browser for, so animations look alike either way.
+-}
+easingFunction : Easing -> Float -> Float
+easingFunction easing x =
+    let
+        { x1, y1, x2, y2 } =
+            case easing of
+                Linear ->
+                    { x1 = 0, y1 = 0, x2 = 1, y2 = 1 }
+
+                EaseInOut ->
+                    { x1 = 0.5, y1 = 0, x2 = 0.5, y2 = 1 }
+
+                EaseIn ->
+                    { x1 = 0.5, y1 = 0, x2 = 1, y2 = 1 }
+
+                EaseOut ->
+                    { x1 = 0, y1 = 0, x2 = 0.5, y2 = 1 }
+
+                CubicBezier a b c d ->
+                    { x1 = a, y1 = b, x2 = c, y2 = d }
+
+        bezier p1 p2 s =
+            3 * (1 - s) * (1 - s) * s * p1 + 3 * (1 - s) * s * s * p2 + s * s * s
+
+        -- The curve's x grows monotonically for control points inside
+        -- [0, 1], so bisection finds the parameter for a given x.
+        solve lo hi steps =
+            let
+                mid =
+                    (lo + hi) / 2
+            in
+            if steps <= 0 then
+                mid
+
+            else if bezier x1 x2 mid < x then
+                solve mid hi (steps - 1)
+
+            else
+                solve lo mid (steps - 1)
+    in
+    if x <= 0 then
+        0
+
+    else if x >= 1 then
+        1
+
+    else
+        bezier y1 y2 (solve 0 1 30)
 
 
 {-| A 2×3 affine transformation matrix, matching SVG's `matrix(a b c d e f)`.
@@ -242,10 +308,16 @@ walked and serialized, not only handed to the virtual DOM.
     virtual DOM, so `toString` emits the stand-in instead.
   - `RawLazy`: a lazily-rendered subtree. The node preserves
     `VirtualDom.lazy` caching; the thunk lets `toString` force the content.
+  - `KeyedTag`: like `Tag`, but its children are rendered as a keyed list
+    (one key per child, in order), so the virtual DOM moves existing DOM
+    nodes when children are reordered instead of patching them in place.
+    `Evg.Drag` relies on this to keep the element under a finger alive while
+    the drawing rearranges around it.
 
 -}
 type Content msg
     = Tag String (List (VirtualDom.Attribute msg)) (List (Mat23 -> VirtualDom.Attribute msg))
+    | KeyedTag String (List (VirtualDom.Attribute msg)) (List (Mat23 -> VirtualDom.Attribute msg)) (List String)
     | TextContent String
     | Raw (VirtualDom.Node msg) (Evg msg)
     | RawLazy (VirtualDom.Node msg) (() -> Evg msg)
@@ -289,6 +361,19 @@ toNodeWith parentAccum (Evg { content, ownMatrix, children }) =
                         accum
             in
             svgNode tag finalAttrs (List.map (toNodeWith childAccum) children)
+
+        KeyedTag tag vdomAttrs eventBuilders keys ->
+            let
+                accum =
+                    composeMat parentAccum ownMatrix
+
+                finalAttrs =
+                    vdomAttrs ++ List.map (\build -> build accum) eventBuilders
+            in
+            VirtualDom.keyedNodeNS "http://www.w3.org/2000/svg"
+                tag
+                finalAttrs
+                (List.map2 (\key child -> ( key, toNodeWith accum child )) keys children)
 
         TextContent str ->
             VirtualDom.text str
@@ -478,6 +563,12 @@ mapContent fn content =
             Tag tag
                 (List.map (VirtualDom.mapAttribute fn) vdomAttrs)
                 (List.map (\build accum -> VirtualDom.mapAttribute fn (build accum)) eventBuilders)
+
+        KeyedTag tag vdomAttrs eventBuilders keys ->
+            KeyedTag tag
+                (List.map (VirtualDom.mapAttribute fn) vdomAttrs)
+                (List.map (\build accum -> VirtualDom.mapAttribute fn (build accum)) eventBuilders)
+                keys
 
         TextContent str ->
             TextContent str
@@ -682,23 +773,10 @@ serialize (Evg { content, children, attrs }) =
     -- IGNORE TCO: tree recursion over children cannot be tail-call optimized
     case content of
         Tag tag _ _ ->
-            let
-                attrStr =
-                    attrs
-                        |> dedupeAttrs
-                        |> List.map (\( k, v ) -> " " ++ k ++ "=\"" ++ escapeAttr v ++ "\"")
-                        |> String.concat
+            serializeTag tag attrs children
 
-                inner =
-                    children
-                        |> List.map serialize
-                        |> String.concat
-            in
-            if String.isEmpty inner then
-                "<" ++ tag ++ attrStr ++ "/>"
-
-            else
-                "<" ++ tag ++ attrStr ++ ">" ++ inner ++ "</" ++ tag ++ ">"
+        KeyedTag tag _ _ _ ->
+            serializeTag tag attrs children
 
         TextContent str ->
             escapeText str
@@ -708,6 +786,28 @@ serialize (Evg { content, children, attrs }) =
 
         RawLazy _ thunk ->
             serializeWithLocalDefs (thunk ())
+
+
+serializeTag : String -> List ( String, String ) -> List (Evg msg) -> String
+serializeTag tag attrs children =
+    -- IGNORE TCO: mutual recursion with serialize over the tree
+    let
+        attrStr =
+            attrs
+                |> dedupeAttrs
+                |> List.map (\( k, v ) -> " " ++ k ++ "=\"" ++ escapeAttr v ++ "\"")
+                |> String.concat
+
+        inner =
+            children
+                |> List.map serialize
+                |> String.concat
+    in
+    if String.isEmpty inner then
+        "<" ++ tag ++ attrStr ++ "/>"
+
+    else
+        "<" ++ tag ++ attrStr ++ ">" ++ inner ++ "</" ++ tag ++ ">"
 
 
 {-| A lazy subtree renders its own defs locally (see Evg.Performance), so its

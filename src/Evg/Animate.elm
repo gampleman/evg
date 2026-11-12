@@ -364,40 +364,36 @@ a constant rate, starts slow and speeds up, or the reverse. The values covered
 are the same either way; easing only changes how fast the animation travels
 through them at each moment.
 -}
-type Easing
-    = Linear
-    | EaseInOut
-    | EaseIn
-    | EaseOut
-    | CubicBezier Float Float Float Float
+type alias Easing =
+    Internal.Easing
 
 
 {-| Constant speed from start to finish.
 -}
 easeLinear : Easing
 easeLinear =
-    Linear
+    Internal.Linear
 
 
 {-| Starts slow, speeds up, then slows down at the end.
 -}
 easeInOut : Easing
 easeInOut =
-    EaseInOut
+    Internal.EaseInOut
 
 
 {-| Starts slow, then speeds up.
 -}
 easeIn : Easing
 easeIn =
-    EaseIn
+    Internal.EaseIn
 
 
 {-| Starts fast, then slows down.
 -}
 easeOut : Easing
 easeOut =
-    EaseOut
+    Internal.EaseOut
 
 
 {-| A custom speed profile defined by a cubic bezier curve, the same format
@@ -412,7 +408,7 @@ target and settle, like a spring.
 -}
 cubicBezier : Float -> Float -> Float -> Float -> Easing
 cubicBezier =
-    CubicBezier
+    Internal.CubicBezier
 
 
 {-| Animates a single attribute of a shape between keyframe values with easing.
@@ -1692,7 +1688,7 @@ normalizeKeyframes dur startValue kfs =
             case raw of
                 ( t0, _, v0 ) :: _ ->
                     if t0 > 0.001 then
-                        ( 0, Linear, Maybe.withDefault v0 startValue ) :: raw
+                        ( 0, Internal.Linear, Maybe.withDefault v0 startValue ) :: raw
 
                     else
                         raw
@@ -1703,7 +1699,7 @@ normalizeKeyframes dur startValue kfs =
     case List.reverse withStart of
         ( tLast, _, vLast ) :: _ ->
             if tLast < 0.999 then
-                withStart ++ [ ( 1, Linear, vLast ) ]
+                withStart ++ [ ( 1, Internal.Linear, vLast ) ]
 
             else
                 withStart
@@ -1994,7 +1990,7 @@ getEasing options =
                 _ ->
                     acc
         )
-        EaseInOut
+        Internal.EaseInOut
         options
 
 
@@ -2240,19 +2236,19 @@ orientAngle =
 easingToSpline : Easing -> String
 easingToSpline e =
     case e of
-        Linear ->
+        Internal.Linear ->
             "0 0 1 1"
 
-        EaseInOut ->
+        Internal.EaseInOut ->
             ".5 0 .5 1"
 
-        EaseIn ->
+        Internal.EaseIn ->
             ".5 0 1 1"
 
-        EaseOut ->
+        Internal.EaseOut ->
             "0 0 .5 1"
 
-        CubicBezier x1 y1 x2 y2 ->
+        Internal.CubicBezier x1 y1 x2 y2 ->
             String.fromFloat x1
                 ++ " "
                 ++ String.fromFloat y1

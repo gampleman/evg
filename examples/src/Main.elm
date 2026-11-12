@@ -1,8 +1,11 @@
 module Main exposing (main)
 
+import AlgebraEvg
 import AnimateElmSvg
 import AnimateEvg
 import AnimateTypedSvg
+import ArmElmSvg
+import ArmEvg
 import BadgeElmSvg
 import BadgeEvg
 import BadgeTypedSvg
@@ -21,13 +24,15 @@ import GridElmSvg
 import GridEvg
 import GridTypedSvg
 import Html exposing (Html, a, button, code, div, h1, h2, h3, p, pre, section, text)
-import Html.Attributes exposing (class, href, style, target)
+import Html.Attributes exposing (class, href, id, style, target, title)
 import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import InteractiveElmSvg
 import InteractiveEvg
 import InteractiveTypedSvg
 import Json.Decode as Decode
+import KanbanElmSvg
+import KanbanEvg
 import KeyframesDefsElmSvg
 import KeyframesDefsEvg
 import KeyframesDefsTypedSvg
@@ -40,12 +45,16 @@ import PatternTypedSvg
 import PulseElmSvg
 import PulseEvg
 import PulseTypedSvg
+import SortableElmSvg
+import SortableEvg
 import SunsetElmSvg
 import SunsetEvg
 import SunsetTypedSvg
 import TextElmSvg
 import TextEvg
 import TextTypedSvg
+import ToggleElmSvg
+import ToggleEvg
 
 
 main : Program Decode.Value Model Msg
@@ -65,6 +74,15 @@ type alias Model =
     , interactiveEvg : InteractiveEvg.Model
     , interactiveElmSvg : InteractiveElmSvg.Model
     , interactiveTypedSvg : InteractiveTypedSvg.Model
+    , algebraEvg : AlgebraEvg.Model
+    , toggleEvg : ToggleEvg.Model
+    , toggleElmSvg : ToggleElmSvg.Model
+    , sortableEvg : SortableEvg.Model
+    , sortableElmSvg : SortableElmSvg.Model
+    , armEvg : ArmEvg.Model
+    , armElmSvg : ArmElmSvg.Model
+    , kanbanEvg : KanbanEvg.Model
+    , kanbanElmSvg : KanbanElmSvg.Model
     }
 
 
@@ -80,6 +98,15 @@ type Msg
     | InteractiveEvgMsg InteractiveEvg.Msg
     | InteractiveElmSvgMsg InteractiveElmSvg.Msg
     | InteractiveTypedSvgMsg InteractiveTypedSvg.Msg
+    | AlgebraEvgMsg AlgebraEvg.Msg
+    | ToggleEvgMsg ToggleEvg.Msg
+    | ToggleElmSvgMsg ToggleElmSvg.Msg
+    | SortableEvgMsg SortableEvg.Msg
+    | SortableElmSvgMsg SortableElmSvg.Msg
+    | ArmEvgMsg ArmEvg.Msg
+    | ArmElmSvgMsg ArmElmSvg.Msg
+    | KanbanEvgMsg KanbanEvg.Msg
+    | KanbanElmSvgMsg KanbanElmSvg.Msg
 
 
 subscriptions : Model -> Sub Msg
@@ -88,6 +115,15 @@ subscriptions model =
         [ Sub.map InteractiveEvgMsg (InteractiveEvg.subscriptions model.interactiveEvg)
         , Sub.map InteractiveElmSvgMsg (InteractiveElmSvg.subscriptions model.interactiveElmSvg)
         , Sub.map InteractiveTypedSvgMsg (InteractiveTypedSvg.subscriptions model.interactiveTypedSvg)
+        , Sub.map AlgebraEvgMsg (AlgebraEvg.subscriptions model.algebraEvg)
+        , Sub.map ToggleEvgMsg (ToggleEvg.subscriptions model.toggleEvg)
+        , Sub.map ToggleElmSvgMsg (ToggleElmSvg.subscriptions model.toggleElmSvg)
+        , Sub.map SortableEvgMsg (SortableEvg.subscriptions model.sortableEvg)
+        , Sub.map SortableElmSvgMsg (SortableElmSvg.subscriptions model.sortableElmSvg)
+        , Sub.map ArmEvgMsg (ArmEvg.subscriptions model.armEvg)
+        , Sub.map ArmElmSvgMsg (ArmElmSvg.subscriptions model.armElmSvg)
+        , Sub.map KanbanEvgMsg (KanbanEvg.subscriptions model.kanbanEvg)
+        , Sub.map KanbanElmSvgMsg (KanbanElmSvg.subscriptions model.kanbanElmSvg)
         ]
 
 
@@ -105,6 +141,15 @@ init flags =
       , interactiveEvg = InteractiveEvg.init
       , interactiveElmSvg = InteractiveElmSvg.init
       , interactiveTypedSvg = InteractiveTypedSvg.init
+      , algebraEvg = AlgebraEvg.init
+      , toggleEvg = ToggleEvg.init
+      , toggleElmSvg = ToggleElmSvg.init
+      , sortableEvg = SortableEvg.init
+      , sortableElmSvg = SortableElmSvg.init
+      , armEvg = ArmEvg.init
+      , armElmSvg = ArmElmSvg.init
+      , kanbanEvg = KanbanEvg.init
+      , kanbanElmSvg = KanbanElmSvg.init
       }
     , Cmd.none
     )
@@ -127,6 +172,33 @@ update msg model =
 
         InteractiveTypedSvgMsg subMsg ->
             ( { model | interactiveTypedSvg = InteractiveTypedSvg.update subMsg model.interactiveTypedSvg }, Cmd.none )
+
+        AlgebraEvgMsg subMsg ->
+            ( { model | algebraEvg = AlgebraEvg.update subMsg model.algebraEvg }, Cmd.none )
+
+        ToggleEvgMsg subMsg ->
+            ( { model | toggleEvg = ToggleEvg.update subMsg model.toggleEvg }, Cmd.none )
+
+        ToggleElmSvgMsg subMsg ->
+            ( { model | toggleElmSvg = ToggleElmSvg.update subMsg model.toggleElmSvg }, Cmd.none )
+
+        SortableEvgMsg subMsg ->
+            ( { model | sortableEvg = SortableEvg.update subMsg model.sortableEvg }, Cmd.none )
+
+        SortableElmSvgMsg subMsg ->
+            ( { model | sortableElmSvg = SortableElmSvg.update subMsg model.sortableElmSvg }, Cmd.none )
+
+        ArmEvgMsg subMsg ->
+            ( { model | armEvg = ArmEvg.update subMsg model.armEvg }, Cmd.none )
+
+        ArmElmSvgMsg subMsg ->
+            ( { model | armElmSvg = ArmElmSvg.update subMsg model.armElmSvg }, Cmd.none )
+
+        KanbanEvgMsg subMsg ->
+            ( { model | kanbanEvg = KanbanEvg.update subMsg model.kanbanEvg }, Cmd.none )
+
+        KanbanElmSvgMsg subMsg ->
+            ( { model | kanbanElmSvg = KanbanElmSvg.update subMsg model.kanbanElmSvg }, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -316,19 +388,71 @@ examples model =
       , typedSvgSource = "InteractiveTypedSvg"
       , evgSource = "InteractiveEvg"
       }
+    , { name = "Drag: toggle switch (between)"
+      , elmSvg = Just (Html.map ToggleElmSvgMsg (ToggleElmSvg.view model.toggleElmSvg))
+      , typedSvg = Nothing
+      , evg = Html.map ToggleEvgMsg (ToggleEvg.view model.toggleEvg)
+      , elmSvgSource = "ToggleElmSvg"
+      , typedSvgSource = ""
+      , evgSource = "ToggleEvg"
+      }
+    , { name = "Drag: reorder a list (closest + floating)"
+      , elmSvg = Just (Html.map SortableElmSvgMsg (SortableElmSvg.view model.sortableElmSvg))
+      , typedSvg = Nothing
+      , evg = Html.map SortableEvgMsg (SortableEvg.view model.sortableEvg)
+      , elmSvgSource = "SortableElmSvg"
+      , typedSvgSource = ""
+      , evgSource = "SortableEvg"
+      }
+    , { name = "Drag: robot arm (vary)"
+      , elmSvg = Just (Html.map ArmElmSvgMsg (ArmElmSvg.view model.armElmSvg))
+      , typedSvg = Nothing
+      , evg = Html.map ArmEvgMsg (ArmEvg.view model.armEvg)
+      , elmSvgSource = "ArmElmSvg"
+      , typedSvgSource = ""
+      , evgSource = "ArmEvg"
+      }
+    , { name = "Drag: kanban board (moving between groups)"
+      , elmSvg = Just (Html.map KanbanElmSvgMsg (KanbanElmSvg.view model.kanbanElmSvg))
+      , typedSvg = Nothing
+      , evg = Html.map KanbanEvgMsg (KanbanEvg.view model.kanbanEvg)
+      , elmSvgSource = "KanbanElmSvg"
+      , typedSvgSource = ""
+      , evgSource = "KanbanEvg"
+      }
+    , { name = "Drag: algebra playground (ported from Dragology)"
+      , elmSvg = Nothing
+      , typedSvg = Nothing
+      , evg = Html.map AlgebraEvgMsg (AlgebraEvg.view model.algebraEvg)
+      , elmSvgSource = ""
+      , typedSvgSource = ""
+      , evgSource = "AlgebraEvg"
+      }
     ]
 
 
 viewExample : Model -> Example -> Html Msg
 viewExample model ex =
     section
-        [ style "background" "white"
+        [ id (slug ex.name)
+        , style "background" "white"
         , style "border-radius" "8px"
         , style "padding" "20px"
         , style "margin" "20px 0"
         , style "box-shadow" "0 2px 4px rgba(0,0,0,0.1)"
         ]
-        [ h2 [ style "margin-top" "0", style "color" "#555", style "border-bottom" "1px solid #eee", style "padding-bottom" "10px" ] [ text ex.name ]
+        [ h2 [ style "margin-top" "0", style "color" "#555", style "border-bottom" "1px solid #eee", style "padding-bottom" "10px" ]
+            [ text ex.name
+            , a
+                [ href ("#" ++ slug ex.name)
+                , title "Link to this example"
+                , style "margin-left" "8px"
+                , style "color" "#bbb"
+                , style "text-decoration" "none"
+                , style "font-weight" "normal"
+                ]
+                [ text "#" ]
+            ]
         , Keyed.node "div"
             [ style "display" "flex", style "gap" "20px", style "flex-wrap" "wrap" ]
             [ ( ex.name ++ "-left-" ++ libToString model.leftLib, viewPanel model.sources model.leftLib ex )
@@ -375,6 +499,26 @@ viewPanel sources lib ex =
             Nothing ->
                 text ""
         ]
+
+
+{-| A URL fragment for an example's name: "Drag: toggle switch (between)"
+becomes "drag-toggle-switch-between".
+-}
+slug : String -> String
+slug name =
+    name
+        |> String.toLower
+        |> String.map
+            (\c ->
+                if Char.isAlphaNum c then
+                    c
+
+                else
+                    '-'
+            )
+        |> String.split "-"
+        |> List.filter (not << String.isEmpty)
+        |> String.join "-"
 
 
 libToString : Library -> String

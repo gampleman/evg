@@ -199,6 +199,11 @@ We achieve this by using several important principles:
    - `Evg.Animate.keyframes`: an animation engine built in that allows you to set up complex animations that get turned into low level SMIL automatically.
    - `Evg.Path` helpers: a whole suite of helpers to help do path related computations, such as length, interpolation and so on.
    - `Evg.Events` includes complex decoders that ensure you get the coordinates in a format that is usable for common graphics interactions such as drags, pinches, etc.
+   - `Evg.Drag`: declarative dragging, after the paper [_Declarative Dragging_](https://declarative-dragging.github.io/). Instead of handling pointer events, you say which states dragging an element can lead to, and the library works out the rest: blending the drawing in between, snapping on release, animating, and even solving for continuous values (dragging the hand of a jointed arm finds the joint angles for you):
+
+     ```elm
+     Drag.onDrag ctx "knob" (\() -> Drag.between [ { on = False }, { on = True } ])
+     ```
 
 As you can see, we take ergonomics very seriously. Browse our [comparison page](https://code.gampleman.eu/evg/) to see how code in Evg compares to other popular libraries.
 
