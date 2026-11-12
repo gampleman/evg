@@ -255,137 +255,22 @@ roundTripTests =
                 in
                 roundTripped
                     |> Expect.within (Expect.Relative 1.0e-6) original
-        , fuzz absolutePathFuzzer "fuzz: shorthand curves measure the same as spelled-out ones" <|
+        , fuzz shorthandPathFuzzer "fuzz: shorthand curves measure the same as spelled-out ones" <|
             -- The real test of the smooth shorthands. Each S or T is replaced
             -- by the C or Q it stands for, with the implied control point
-            -- worked out here independently of the library, and the two paths
-            -- must have the same length. A shorthand resolved to the wrong
-            -- control point changes the curve, and so changes the length.
+            -- worked out here rather than by the code under test, and the two
+            -- paths must have the same length. A shorthand resolved to the
+            -- wrong control point describes a different curve, so its length
+            -- differs.
             --
-            -- Note this cannot be checked by round-tripping alone: since
-            -- `fromSegments` always emits explicit C and Q commands, a
-            -- wrongly resolved shorthand round-trips to a path that is
-            -- self-consistently wrong.
+            -- Round-tripping cannot check this: `pathLength` is defined in
+            -- terms of `toSegments`, so it appears on both sides of a
+            -- round-trip property and any error it makes cancels out.
             \paths ->
-                let
-                    expanded =
-                        List.map expandShorthands paths
-                in
-                Evg.Path.pathLength expanded
+                Evg.Path.pathLength (List.map Tuple.second paths)
                     |> Expect.within (Expect.Relative 1.0e-6)
-                        (Evg.Path.pathLength paths)
+                        (Evg.Path.pathLength (List.map Tuple.first paths))
         ]
-
-
-{-| Rewrite a path so that every smooth shorthand becomes the explicit curve
-it stands for, computing the implied control point by reflection here rather
-than relying on the code under test.
--}
-expandShorthands : Path -> Path
-expandShorthands path =
-    case path of
-        M start segments ->
-            M start (expandFrom start Nothing segments)
-
-        MRelative offset segments ->
-            MRelative offset (expandFrom offset Nothing segments)
-
-
-expandFrom : ( Float, Float ) -> Maybe PathSegment -> List PathSegment -> List PathSegment
-expandFrom current previous segments =
-    case segments of
-        [] ->
-            []
-
-        seg :: rest ->
-            let
-                ( cx, cy ) =
-                    current
-
-                reflect ( px, py ) =
-                    ( 2 * cx - px, 2 * cy - py )
-
-                -- Only a curve of the matching family is continued; anything
-                -- else leaves the control point on the current point.
-                expandedSeg =
-                    case ( seg, previous ) of
-                        ( S cp2 to, Just (C _ prevCp2 _) ) ->
-                            C (reflect prevCp2) cp2 to
-
-                        ( S cp2 to, Just (S prevCp2 _) ) ->
-                            C (reflect prevCp2) cp2 to
-
-                        ( S cp2 to, _ ) ->
-                            C current cp2 to
-
-                        ( T to, Just (Q prevCp _) ) ->
-                            Q (reflect prevCp) to
-
-                        ( T to, Just (T _) ) ->
-                            -- The previous T's own control point was itself
-                            -- implied, so recover it from the expansion.
-                            Q (reflect (impliedQuadControl current previous)) to
-
-                        ( T to, _ ) ->
-                            Q current to
-
-                        _ ->
-                            seg
-
-                next =
-                    segmentEnd current expandedSeg
-            in
-            expandedSeg :: expandFrom next (Just expandedSeg) rest
-
-
-{-| The control point of an already-expanded quadratic.
--}
-impliedQuadControl : ( Float, Float ) -> Maybe PathSegment -> ( Float, Float )
-impliedQuadControl current previous =
-    case previous of
-        Just (Q cp _) ->
-            cp
-
-        _ ->
-            current
-
-
-segmentEnd : ( Float, Float ) -> PathSegment -> ( Float, Float )
-segmentEnd ( cx, cy ) seg =
-    case seg of
-        L to ->
-            to
-
-        H x ->
-            ( x, cy )
-
-        V y ->
-            ( cx, y )
-
-        C _ _ to ->
-            to
-
-        S _ to ->
-            to
-
-        Q _ to ->
-            to
-
-        T to ->
-            to
-
-        A _ _ _ _ _ to ->
-            to
-
-        Z ->
-            ( cx, cy )
-
-        Rel _ ->
-            ( cx, cy )
-
-
-
--- Fuzzers
 
 
 pointFuzzer : Fuzzer ( Float, Float )
@@ -478,17 +363,54 @@ segmentToPoint seg =
             to
 
 
+{-| Paths mixing absolute and relative commands, and both kinds of subpath
+start, since the two are resolved by different code.
+-}
 absolutePathFuzzer : Fuzzer (List Path)
 absolutePathFuzzer =
     Fuzz.listOfLengthBetween 1
         3
-        (Fuzz.map2
-            (\start segs ->
-                M start (List.map absolutePathSegment segs)
+        (Fuzz.map3
+            (\relativeStart start segs ->
+                if relativeStart then
+                    MRelative start segs
+
+                else
+                    M start segs
             )
+            Fuzz.bool
             pointFuzzer
-            (Fuzz.listOfLengthBetween 1 4 absolutePathSegmentFuzzer)
+            (Fuzz.listOfLengthBetween 1 4 pathSegmentFuzzer)
         )
+
+
+{-| Either an absolute command or its relative counterpart.
+-}
+pathSegmentFuzzer : Fuzzer PathSegment
+pathSegmentFuzzer =
+    Fuzz.oneOf
+        [ absolutePathSegmentFuzzer
+        , relativePathSegmentFuzzer
+        ]
+
+
+relativePathSegmentFuzzer : Fuzzer PathSegment
+relativePathSegmentFuzzer =
+    Fuzz.oneOf
+        [ Fuzz.map Evg.Path.l pointFuzzer
+        , Fuzz.map Evg.Path.h (Fuzz.floatRange -100 100)
+        , Fuzz.map Evg.Path.v (Fuzz.floatRange -100 100)
+        , Fuzz.map2 Evg.Path.q pointFuzzer pointFuzzer
+        , Fuzz.map3 Evg.Path.c pointFuzzer pointFuzzer pointFuzzer
+        , Fuzz.map2 Evg.Path.s pointFuzzer pointFuzzer
+        , Fuzz.map Evg.Path.t pointFuzzer
+        , Fuzz.map4
+            (\rx ry to sweep -> Evg.Path.a (abs rx + 1) (abs ry + 1) 0 False sweep to)
+            (Fuzz.floatRange 1 50)
+            (Fuzz.floatRange 1 50)
+            pointFuzzer
+            Fuzz.bool
+        ]
 
 
 absolutePathSegmentFuzzer : Fuzzer PathSegment
@@ -510,11 +432,6 @@ absolutePathSegmentFuzzer =
             pointFuzzer
             Fuzz.bool
         ]
-
-
-absolutePathSegment : PathSegment -> PathSegment
-absolutePathSegment seg =
-    seg
 
 
 smoothCurveTests : Test
@@ -616,3 +533,100 @@ smoothCurveTests =
                             }
                         ]
         ]
+
+
+{-| Pairs of paths that must describe the same shape: the first uses the
+smooth shorthands `S` and `T`, the second spells out the `C` and `Q` they
+stand for. The implied control point is computed here, so the pair is built
+independently of the code being tested.
+-}
+shorthandPathFuzzer : Fuzzer (List ( Path, Path ))
+shorthandPathFuzzer =
+    Fuzz.listOfLengthBetween 1
+        3
+        (Fuzz.map2
+            (\start steps ->
+                let
+                    ( shorthand, expanded ) =
+                        buildShorthandPair start steps
+                in
+                ( M start shorthand, M start expanded )
+            )
+            pointFuzzer
+            (Fuzz.listOfLengthBetween 1 5 curveStepFuzzer)
+        )
+
+
+{-| One step of a smooth-curve chain: either an explicit curve, or the
+shorthand that continues it.
+-}
+type CurveStep
+    = ExplicitCubic ( Float, Float ) ( Float, Float ) ( Float, Float )
+    | ExplicitQuadratic ( Float, Float ) ( Float, Float )
+    | StraightLine ( Float, Float )
+    | SmoothCubic ( Float, Float ) ( Float, Float )
+    | SmoothQuadratic ( Float, Float )
+
+
+curveStepFuzzer : Fuzzer CurveStep
+curveStepFuzzer =
+    Fuzz.oneOf
+        [ Fuzz.map3 ExplicitCubic pointFuzzer pointFuzzer pointFuzzer
+        , Fuzz.map2 ExplicitQuadratic pointFuzzer pointFuzzer
+        , Fuzz.map StraightLine pointFuzzer
+        , Fuzz.map2 SmoothCubic pointFuzzer pointFuzzer
+        , Fuzz.map SmoothQuadratic pointFuzzer
+        ]
+
+
+{-| Turn the steps into the shorthand form and the spelled-out form at once,
+tracking the pen position and the control point a shorthand would mirror.
+-}
+buildShorthandPair : ( Float, Float ) -> List CurveStep -> ( List PathSegment, List PathSegment )
+buildShorthandPair start steps =
+    let
+        -- The previous control point is only mirrored when the previous
+        -- command was a curve of the *same* family: cubics continue cubics,
+        -- quadratics continue quadratics. Otherwise the implied control point
+        -- sits on the current point.
+        go current lastCubic lastQuad remaining shortAcc longAcc =
+            case remaining of
+                [] ->
+                    ( List.reverse shortAcc, List.reverse longAcc )
+
+                step :: rest ->
+                    let
+                        ( cx, cy ) =
+                            current
+
+                        mirror maybeControl =
+                            case maybeControl of
+                                Just ( px, py ) ->
+                                    ( 2 * cx - px, 2 * cy - py )
+
+                                Nothing ->
+                                    current
+                    in
+                    case step of
+                        ExplicitCubic cp1 cp2 to ->
+                            go to (Just cp2) Nothing rest (C cp1 cp2 to :: shortAcc) (C cp1 cp2 to :: longAcc)
+
+                        ExplicitQuadratic cp to ->
+                            go to Nothing (Just cp) rest (Q cp to :: shortAcc) (Q cp to :: longAcc)
+
+                        StraightLine to ->
+                            -- Breaks both chains: a following shorthand has no
+                            -- matching curve to continue.
+                            go to Nothing Nothing rest (L to :: shortAcc) (L to :: longAcc)
+
+                        SmoothCubic cp2 to ->
+                            go to (Just cp2) Nothing rest (S cp2 to :: shortAcc) (C (mirror lastCubic) cp2 to :: longAcc)
+
+                        SmoothQuadratic to ->
+                            let
+                                implied =
+                                    mirror lastQuad
+                            in
+                            go to Nothing (Just implied) rest (T to :: shortAcc) (Q implied to :: longAcc)
+    in
+    go start Nothing Nothing steps [] []
